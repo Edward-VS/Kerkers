@@ -1,18 +1,14 @@
+/**
+ * The package for a roleplaying game.
+ */
 package dungeons.obstacle;
 
-import dungeons.Square;
-
-
-public class Obstacle {
-
-	private Square[] adjacent;
+/**
+ * Class for the creation of obstacles.
+ * 
+ * @author Christof Vermeersch & Edward Van Sieleghem
+ */
+public abstract class Obstacle {
 	
-	public Obstacle(){
-		
-	}
-	
-	public Obstacle(Square adjacentOne){
-		
-	}
-	
+
 }

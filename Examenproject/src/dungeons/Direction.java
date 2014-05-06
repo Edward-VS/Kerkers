@@ -1,7 +1,7 @@
 /**
  * The package for a roleplaying game.
  */
-package dungeons.util;
+package dungeons;
 
 /**
  * Enum with the different directions.

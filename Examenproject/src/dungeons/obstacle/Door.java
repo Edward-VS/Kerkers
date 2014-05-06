@@ -1,15 +1,28 @@
+/**
+ * 
+ */
 package dungeons.obstacle;
 
-public class Door extends Obstacle{
+/**
+ * @author Christof
+ *
+ */
+public class Door extends Obstacle {
 
-	private boolean isOpen;
-	
-	public void setOpen(boolean isOpen){
-		this.isOpen = isOpen;
+	/**
+	 * @return
+	 */
+	public boolean isOpen() {
+		// TODO Auto-generated method stub
+		return false;
 	}
-	
-	public boolean isOpen(){
-		return isOpen;
+
+	/**
+	 * @param open
+	 */
+	public void setMoveable(boolean open) {
+		// TODO Auto-generated method stub
+		
 	}
-	
+
 }
