@@ -8,6 +8,8 @@ import java.util.Map.Entry;
 import java.util.ArrayList;
 
 import be.kuleuven.cs.som.annotate.*;
+import dungeons.util.*;
+import dungeons.obstacle.*;
 
 /**
  * A class for the creation of objects of Squares.
