@@ -15,8 +15,6 @@ import dungeons.obstacle.*;
  * A class for the creation of objects of Squares.
  * 
  * @author Christof Vermeersch & Edward Van Sieleghem
- * @invar The temperature must be between valid boundaries.
- * 		|isValidTemperature(this.getTemperature())
  * @invar The square can maximum have 6 boundaries.
  * 		|obstacleMap.size() <= 6
  * @invar The obstacles must be valid.
@@ -25,7 +23,7 @@ import dungeons.obstacle.*;
  * 		|hasProperNeighbors() == true
  * @invar The temperature must be the same as the other squares of its group.
  * 		Also the temperature must be between valid boundaries.
- * 		|hasProperTemperature()
+ * 		|hasProperTemperature() == true
  */
 public class Square {
 
@@ -36,7 +34,8 @@ public class Square {
 	 * @post The temperature is set to a default value.
 	 * 		|new.getTemperature() == DEFAULT_TEMPERATURE
 	 * @post The newly created square is surrounded by walls.
-	 * 		|for each direction in Direction.values(): new.hasWall(direction) == true
+	 * 		|for each direction in Direction.values(): 
+	 * 		|	new.hasWall(direction) == true
 	 */
 	public Square() {
 		this.temperature = DEFAULT_TEMPERATURE;
@@ -55,7 +54,8 @@ public class Square {
 	 * @post The temperature is set to the given value.
 	 * 		|new.getTemperature() == temp
 	 * @post The newly created square is surrounded by walls.
-	 * 		|for each direction in Direction.values(): new.hasWall(direction) == true
+	 * 		|for each direction in Direction.values(): 
+	 * 		|	new.hasWall(direction) == true
 	 */
 	public Square(int temp) {
 		this.temperature = temp;
@@ -84,7 +84,9 @@ public class Square {
 	 * @post The square is surrounded by walls. 
 	 * 		|for each direction in Direction.values(): new.hasWall(direction) == true
 	 * @post At the place where the square had neighbors, the neighbors will also have walls.
-	 * 		|for each direction in Direction.values(): if(old.getNeighborAt(direction != null) then (new.(old.getNeighborAt(direction))).hasWall(direction) == true
+	 * 		|for each direction in Direction.values(): 
+	 * 		|	if(old.getNeighborAt(direction != null) 
+	 * 		|		then (new.(old.getNeighborAt(direction))).hasWall(direction) == true
 	 * @post The square doesn't have any neighbors left.
 	 * 		|new.getNeighborsMap().isEmpty() == true
 	 */
@@ -161,7 +163,7 @@ public class Square {
 	}
 
 	/**
-	 * Checker that tells if the temperature is valid.
+	 * Checker that tells if the given temperature is valid as start temperature for an isolated square.
 	 * @param temp The temperature to test.
 	 * @return Returns true if the temperature is between the two boundary temperatures.
 	 * 		|return == (temp < this.getMaxTemperature() && temp < this.getMinTemperature())
@@ -169,16 +171,32 @@ public class Square {
 	public static boolean isValidTemperature(int temp) {
 		return (temp < Square.getMaxTemperature() && temp > Square.getMinTemperature());
 	}
+	
+	/**
+	 * Checker that tells if the current temperature is valid.
+	 * @return Returns true if the temperature is between the two boundary temperatures and the temperature
+	 * 		is the same as in the other squares of the group containing this square.
+	 * 		|return == (isValidTemperature(this.getTemperature()) 
+	 * 		|			&& (this.getTemperature() == this.calculateUpdateTemperature())
+	 */
+	public boolean hasProperTemperature(){
+		return (isValidTemperature(this.getTemperature()) && (this.getTemperature() == this.calculateUpdateTemperature()));
+	}
 
 	/**
 	 * A method to calculate the damage due too temperature.
 	 * 
-	 * @return If the temperature is too hot, there will be a certain points damage for each specified step of degrees above a certain temperature.
-	 * 		|If(this.getTemperature() > this.getHeatDamageAbove()) then return == floor((this.getTemperature()-this.getHeatDamageAbove)/this.getHeatDamageStep)*this.getUnitHeatDamage()
-	 * @return If the temperature is too cold, there will be 1 point damage for each 10° below -5°.
-	 * 		|If(this.getTemperature() < -5) then return == floor((abs(this.getTemperature())-5)/10)
+	 * @return If the temperature is too hot, 
+	 * 		there will be a certain points damage for each specified step of degrees above a certain temperature.
+	 * 		|If(this.getTemperature() > this.getHeatDamageAbove()) 
+	 * 		|	then return == (((this.getTemperature()-this.getHeatDamageAbove)/this.getHeatDamageStep)*this.getUnitHeatDamage()
+	 * @return If the temperature is too cold, 
+	 * 		there will be 1 point damage for each 10° below -5°.
+	 * 		|If(this.getTemperature() < -5) 
+	 * 		|	then return == (abs(this.getTemperature())-5)/10
 	 * @return If the temperature is between the boundaries there will be no damage.
-	 * 		|If(this.getTemperature() > this.getHeatDamageAbove() && this.getTemperature() < -5) then return == 0
+	 * 		|If(this.getTemperature() > this.getHeatDamageAbove() && this.getTemperature() < -5) 
+	 * 		|	then return == 0
 	 */
 	public int calculateTemperatureDamage() {
 		if (this.getTemperature() > Square.getHeatDamageAbove()) {
@@ -194,8 +212,10 @@ public class Square {
 	/**
 	 * Method to calculate the temperature of a group without changing it.
 	 * 
-	 * @return The temperature of the whole group will be  the average of all the squares in the group.
-	 * 		|for each square in computeGroup(): return == (for each square in computeGroup(): sum = sum + old.square.getTemperature)/calculateGroup().size()
+	 * @return The temperature of the whole group will be the average of all the squares in the group.
+	 * 		|for each square in computeGroup(): 
+	 * 		|	return == (for each square in computeGroup():
+	 * 		|		 sum = sum + old.square.getTemperature)/calculateGroup().size()
 	 */
 	public int calculateUpdateTemperature() {
 		int sum = 0;
@@ -214,12 +234,13 @@ public class Square {
 	 * @post The current temperature is set to the given one.
 	 * 		|new.getTemperature() == temp
 	 * @throws IllegalArgumentException [MUST] The given temperature is not valid.
-	 * 		|!isValidTemperature(temp)
+	 * 		|!isValidTemperature(temp) || !new.hasProperTemperature()
 	 */
-	public void setTemperature(int temp) throws IllegalArgumentException {
-		if (isValidTemperature(temp)) {
-			this.temperature = temp;
-		} else {
+	private void setTemperature(int temp) throws IllegalArgumentException {
+		int oldTemperature = this.getTemperature();
+		this.temperature =  temp;
+		if((!this.hasProperTemperature())||(!Square.isValidTemperature(temp))){
+			this.temperature = oldTemperature;
 			throw new IllegalArgumentException("The temperature is not valid!");
 		}
 	}
@@ -283,15 +304,11 @@ public class Square {
 	 * Method to set the temperature of a group.
 	 * 
 	 * @post The temperature of the whole group will be set to the average of all the squares in the group.
-	 * 		|for each square in computeGroup(): new.square.getTemperature() == (for each square in computeGroup(): sum = sum + old.square.getTemperature)/calculateGroup().size()
+	 * 		|for each square in this.computeGroup(): 
+	 * 		|	square.getTemperature() == this.calculateUpdateTemperature()
 	 */
 	public void updateTemperature() {
-		int sum = 0;
-		int average;
-		for (Square square : this.computeGroup()) {
-			sum = sum + square.getTemperature();
-		}
-		average = sum / this.computeGroup().size();
+		int average = this.calculateUpdateTemperature();
 		for (Square square : this.computeGroup()) {
 			square.setTemperature(average);
 		}
@@ -377,6 +394,26 @@ public class Square {
 			return false;
 		}
 	}
+	
+	/**
+	 * Inspector to check if a door in a certain direction is open.
+	 * 
+	 * @param dir The direction in which you want to check the door.
+	 * @return If there is a door in that direction, returns true if the door is open.
+	 * 		|if(this.hasDoor(dir))
+	 * 		|	then return == ((Door)this.getObstacleAt(dir)).isOpen()
+	 * @return If there is no door in that direction, returns false.
+	 * 		|if(!this.hasDoor(dir))
+	 * 		|	then return == false
+	 */
+	public boolean isOpen(Direction dir){
+		if(this.hasDoor(dir)){
+			return ((Door)this.getObstacleAt(dir)).isOpen();
+		}
+		else{
+			return false;
+		}
+	}
 
 	/**
 	 * Inspector to check if a square has a wall in a certain direction.
@@ -398,27 +435,37 @@ public class Square {
 	 * 
 	 * @param dir The direction.
 	 * @return Returns true if the obstacle is the same for this and his neighbor in a given direction.
-	 * 		|if(this.hasWall(dir)) then return == this.getNeighborAt(dir).hasWall(dir)
-	 * 		|if(this.hasDoor(dir)) then return == this.getNeighborAt(dir).hasDoor(dir)
-	 * 		|if(!this.hasDoor(dir) && !this.hasWall(dir)) then return == !this.hasDoor(dir) && !this.hasWall(dir)
+	 * 		This is also important for the moveability.
+	 * 		|if(this.hasWall(dir)) 
+	 * 		|	then return == this.getNeighborAt(dir).hasWall(dir.oppositeDirection()) 
+	 * 		|if(this.hasDoor(dir)) 
+	 * 		|	then return == this.getNeighborAt(dir).hasDoor(dir.oppositeDirection())
+	 * 		|				&& (this.isOpen(dir) == this.getNeighborAt(dir).isOpen(dir.oppositeDirection())
+	 * 		|if(!this.hasDoor(dir) && !this.hasWall(dir)) 
+	 * 		|	then return == !this.getNeighborAt(dir).hasDoor(dir.oppositeDirection()) 
+	 * 		|				&& !this.getNeighborAt(dir)hasWall(dir.oppositeDirection())
 	 */
 	public boolean hasSameAdjecantObstacleAt(Direction dir) {
 		if (this.hasWall(dir)) {
-			return this.getNeighborAt(dir).hasWall(dir);
+			return this.getNeighborAt(dir).hasWall(dir.oppositeDirection());
 		}
 		if (this.hasDoor(dir)) {
-			return this.getNeighborAt(dir).hasDoor(dir);
+			return ((this.getNeighborAt(dir).hasDoor(dir.oppositeDirection())) && (this.isOpen(dir) == this.getNeighborAt(dir).isOpen(dir.oppositeDirection())));
 		} else {
-			return !this.hasDoor(dir) && !this.hasWall(dir);
+			return !this.getNeighborAt(dir).hasDoor(dir.oppositeDirection()) && !this.getNeighborAt(dir).hasWall(dir.oppositeDirection());
 		}
 
 	}
-
+	
+	// TODO Verbeteren klasse tot hier
 	/**
 	 * Checker that controls if the obstacles now are possible for this square.
 	 * 
-	 * @return Returns true if all the obstacles are possible for this square and if ther is an neighbor, the neighbor has the same obstacle.
-	 * 		|return == (for each direction in Direction.values(): this.canHaveAsObstacleAt(direction, this.getObstacleAt(direction)) && if(this.getNeighborAt(direction) != null) then this.hasSameAdjecantObstacleAt(direction)) 
+	 * @return Returns true if all the obstacles are possible for this square 
+	 * 		and if there is an neighbor, the neighbor has the same obstacle with same moveability.
+	 * 		|return == (for each direction in Direction.values(): 
+	 * 		|	this.canHaveAsObstacleAt(direction, this.getObstacleAt(direction)) 
+	 * 		|	&& if(this.getNeighborAt(direction) != null) then this.hasSameAdjecantObstacleAt(direction)) 
 	 */
 	public boolean hasProperObstacles() {
 		for (Direction direction : Direction.values()) {
@@ -440,11 +487,14 @@ public class Square {
 	 * @param dir The direction in which you want to check.
 	 * @param obstacle The obstacle you want to check.
 	 * @return If the obstacle is a wall, then the obstacle is always possible.
-	 * 		|if(obstacle instanceof Wall) then return == true
+	 * 		|if(obstacle instanceof Wall) 
+	 * 		|	then return == true
 	 * @return If the obstacle is a door, then the obstacle is only possible if there is a neighbor in that direction.
-	 * 		|if(obstacle instanceof Door) then return == this.hasNeighborAt(dir) 
+	 * 		|if(obstacle instanceof Door) 
+	 * 		|	then return == this.hasNeighborAt(dir) 
 	 * @return If the obstacle is an empty reference, so there is no wall or door, then there must be a neighbor in that direction.
-	 * 		|if(obstacle == null) then return == this.hasNeighborAt(dir)
+	 * 		|if(obstacle == null) 
+	 * 		|	then return == this.hasNeighborAt(dir)
 	 */
 	public boolean canHaveAsObstacleAt(Direction dir, Obstacle obstacle) {
 		if (obstacle instanceof Wall) {
