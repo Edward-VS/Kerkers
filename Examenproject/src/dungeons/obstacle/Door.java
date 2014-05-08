@@ -25,4 +25,12 @@ public class Door extends Obstacle {
 		
 	}
 
+	/**
+	 * @return
+	 */
+	public Object setOpen() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }
