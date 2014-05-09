@@ -306,8 +306,12 @@ public class Square {
 	 * @post The temperature of the whole group will be set to the average of all the squares in the group.
 	 * 		|for each square in this.computeGroup(): 
 	 * 		|	square.getTemperature() == this.calculateUpdateTemperature()
+	 * @note This method is annotated raw because it can be used when 
+	 * 		the temperature isn't yet in line with the classinvariants concerning the temperature.
+	 * @note This method is private because the only use of this method is in the method mergeWith()
 	 */
-	public void updateTemperature() {
+	@Raw
+	private void updateTemperature() {
 		int average = this.calculateUpdateTemperature();
 		for (Square square : this.computeGroup()) {
 			square.setTemperature(average);
