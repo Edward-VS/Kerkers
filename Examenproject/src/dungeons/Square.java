@@ -457,24 +457,35 @@ public class Square {
 
 	}
 	
-	// TODO instance of verplaatsen naar hasProperObstacles, gebruik maken van canHaveAsDoor, canHaveAsWall en gebruik laten maken van canHaveAsObstacle ->mijmeren
 	/**
-	 * Checker that controls if the obstacles now are possible for this square.
+	 * Checker that controls if the obstacles that are set now are possible for this square.
 	 * 
-	 * @return Returns true if all the obstacles are possible for this square 
-	 * 		and if there is a neighbor, the neighbor has the same obstacle with the same moveability.
-	 * 		|return == (for each direction in Direction.values(): 
-	 * 		|	this.canHaveAsObstacleAt(direction, this.getObstacleAt(direction)) 
-	 * 		|	&& if(this.getNeighborAt(direction) != null) then this.hasSameAdjecantObstacleAt(direction)) 
+	 * @return Returns false if an obstacles is invalid for this square 
+	 * 		|for some direction in Direction.values(): 
+	 * 		|	 if(!this.canHaveAsObstacle(direction, this.getObstacleAt(direction)) 
+	 * 		|		then return == false
+	 * @return Returns false if there is a neighbor at given direction and the obstacles between both aren't the same.
+	 * 		|for some direction in Direction.values():
+	 *		|	if(this.hasNeighborAt(direction))
+	 *		|		if(!this.hasSameAdjecantObstacleAt(direction))
+	 *		|			then return == false
+	 * @return Returns false if there is a neighbor at given direction and there is a wall between both with a different moveability.
+	 * 		|for some direction in Direction.values():
+	 *		|	if(this.hasNeighborAt(direction))
+	 *		|		(if(this.hasDoorAt(direction)) 	
+	 * 		|			then this.getObstacleAt(direction).isOpen() == this.getNeighborAt(direction).getObstacleAt(direction.oppositeDirection()).isOpen))
 	 */
 	public boolean hasProperObstacles() {
 		for (Direction direction : Direction.values()) {
 			if (!this.canHaveAsObstacleAt(direction, this.getObstacleAt(direction))) {
 				return false;
 			}
-			if (this.getNeighborAt(direction) != null) {
-				if (!this.hasSameAdjecantObstacleAt(direction)) {
+			if(this.hasNeighborAt(direction)){
+				if(!this.hasSameAdjecantObstacleAt(direction)){
 					return false;
+				}
+				if(this.hasDoor(direction)){ 	
+				 return this.isOpen(direction) == this.getNeighborAt(direction).isOpen(direction);
 				}
 			}
 		}
@@ -486,28 +497,11 @@ public class Square {
 	 * 
 	 * @param dir The direction in which you want to check.
 	 * @param obstacle The obstacle you want to check.
-	 * @return If the obstacle is a wall, then the obstacle is always possible.
-	 * 		|if(obstacle instanceof Wall) 
-	 * 		|	then return == true
-	 * @return If the obstacle is a door, then the obstacle is only possible if there is a neighbor in that direction.
-	 * 		|if(obstacle instanceof Door) 
-	 * 		|	then return == this.hasNeighborAt(dir) 
-	 * @return If the obstacle is an empty reference, so there is no wall or door, then there must be a neighbor in that direction.
-	 * 		|if(obstacle == null) 
-	 * 		|	then return == this.hasNeighborAt(dir)
+	 * @return The method will return the return of canBeAnObstacleAt of the specific obstacle.
+	 * 		|return == obstacle.canBeAnObstacleAt(this, dir)
 	 */
 	public boolean canHaveAsObstacleAt(Direction dir, Obstacle obstacle) {
-		if (obstacle instanceof Wall) {
-			return true;
-		}
-		if (obstacle instanceof Door) {
-			return this.getNeighborAt(dir) != null;
-		}
-		if (obstacle == null) {
-			return this.getNeighborAt(dir) != null;
-		} else {
-			return false;
-		}
+		return obstacle.canBeAnObstacleAt(this, dir);
 	}
 
 	/**
@@ -517,15 +511,22 @@ public class Square {
 	 * @post If it is possible to set a wall, the wall will be set at the given direction.
 	 * 		|if(canHaveAsObstacle(dir, new Wall()) 
 	 * 		|	then new.hasWall(dir) == true
-	 * @post If the square has a neighbor at the given direction and the building of a wall is possible, 
-	 * 		then a wall will also be set in the adjecant square at opposite direction.
-	 * 		|If(getNeighbor(dir) != null && canHaveAsObstacle(dir, new Wall()) 
-	 * 		|	then getNeighborAt(dir).hasWallAt(dir.oppositeDirection())
+	 * @post If the square has a neighbor at the given direction and the building of a wall is possible in both squares, 
+	 * 		then a wall will be set in both the adjecant squares at opposite directions.
+	 * 		|if(getNeighbor(dir) != null)
+	 * 		|	if(getNeighborAt(dir).canHaveAsObstacle(dir.oppositeDirection(), new Wall()) && this.canHaveAsObstacle(dir, new Wall())) 
+	 * 		|		then getNeighborAt(dir).hasWallAt(dir.oppositeDirection()) && new.hasWall(dir) == true
 	 */
 	public void buildWallAt(Direction dir) {
 		Obstacle wall = new Wall();
-		if (canHaveAsObstacleAt(dir, wall)) {
+		if (canHaveAsObstacleAt(dir, wall) && this.getNeighborAt(dir) == null) {
 			this.setObstacleAt(dir, wall);
+		}
+		if(this.getNeighborAt(dir) != null){
+			if (canHaveAsObstacleAt(dir, wall) && this.getNeighborAt(dir).canHaveAsObstacleAt(dir.oppositeDirection(), wall)) {
+				this.setObstacleAt(dir, wall);
+				this.getNeighborAt(dir).setObstacleAt(dir.oppositeDirection(), wall);
+			}
 		}
 	}
 
@@ -534,22 +535,29 @@ public class Square {
 	 *
 	 * @param dir The direction in which you want to add a wall.
 	 * @post If it is possible to set a door, the door will be set at the given direction.
-	 * 		The door will be set open.
-	 * 		|if(canHaveAsObstacle(dir, new Door()) 
-	 * 		|	then new.hasDoor(dir) == true && new.isOpen(dir) 
-	 * @post If the square has a neighbor at the given direction and the building of a door is possible, then a door will also be set in the adjecant square at opposite direction.
 	 * 		The door will also be set open.
-	 * 		|If(getNeighbor(dir) != null && canHaveAsObstacle(dir, new Door()) 
-	 * 		|	then getNeighborAt(dir).hasWallAt(dir.oppositeDirection() && getNeighborAt(dir).isOpen(dir.oppositeDirection())
+	 * 		|if(canHaveAsObstacle(dir, new Door()) 
+	 * 		|	then new.hasDoor(dir) == true && new.isOpen(dir)
+	 * @post If the square has a neighbor at the given direction and the building of a door is possible in both squares, 
+	 * 		then a door will be set in both the adjecant squares at opposite directions.
+	 * 		The door will also be open.
+	 * 		|if(getNeighbor(dir) != null)
+	 * 		|	if(getNeighborAt(dir).canHaveAsObstacle(dir.oppositeDirection(), new Door()) && this.canHaveAsObstacle(dir, new Door())) 
+	 * 		|		then getNeighborAt(dir).hasDoorAt(dir.oppositeDirection()) && new.hasDoor(dir) == true && getNeighborAt(dir).isOpen(dir.oppositeDirection()) && this.isOpen(dir)
 	 * @post If the door is build (and as a consequence set open) the temperature of the newly formed group will be updated.
 	 * 		|for each square in this.calculateGroup():
 	 * 		|	square.getTemperature() == square.calculateUpdateTemperature()
 	 */
 	public void buildDoorAt(Direction dir) {
-		Obstacle door = new Door();
-		if (canHaveAsObstacleAt(dir, door)) {
+		Obstacle door = new Door(true);
+		if (canHaveAsObstacleAt(dir, door) && this.getNeighborAt(dir) == null) {
 			this.setObstacleAt(dir, door);
-			((Door)door).setOpen();
+		}
+		if(this.getNeighborAt(dir) != null){
+			if (canHaveAsObstacleAt(dir, door) && this.getNeighborAt(dir).canHaveAsObstacleAt(dir.oppositeDirection(), door)) {
+				this.setObstacleAt(dir, door);
+				this.getNeighborAt(dir).setObstacleAt(dir.oppositeDirection(), door);
+			}
 		}
 	}
 	
@@ -581,20 +589,15 @@ public class Square {
 	 * @post If the obstacle isn't a null reference, the obstacle will be set at the given direction.
 	 * 		|if(obstacle != null)
 	 * 		|	then new.getObstacleAt(dir) == obstacle
-	 * @post If the obstacle isn't a null reference and the square has a neighbor at the given direction, 
-	 * 		then the obstacle will also be set in the adjecant square at opposite direction.
-	 * 		|if((getNeighbor(dir) != null) && (obstacle != null)) 
-	 * 		|	then new.getNeighborAt(dir).getObstacleAt(dir.oppositeDirection()) == obstacle
 	 * @effect If the obstacle is the null reference, the method will destroy the previous obstacle.
 	 * 		|if(obstacle == null)
 	 * 		|	then destroyObstacle(dir)
+	 * @note This method is annotated raw because it doesn't take the obstacle invariant into account.
 	 */
+	@Raw
 	private void setObstacleAt(Direction dir, Obstacle obstacle) {
 		if(obstacle != null){
 			this.obstaclesMap.put(dir, obstacle);
-			if(this.getNeighborAt(dir) != null) {
-				this.getNeighborAt(dir).obstaclesMap.put(dir.oppositeDirection(), obstacle);
-			}
 		}
 		else{
 			this.destroyObstacle(dir);
@@ -648,36 +651,41 @@ public class Square {
 	}
 
 	/**
-	 * When the obstacles aren't proper then this method will fix them.
+	 * When the obstacles aren't proper then this method will fix them. 
+	 * The obstacles will be set the same as those of the neighbor.
+	 * Also the moveability of an obstacle will be set the same.
 	 * 
-	 * @post The method will set walls in every direction where there is no neighbor and this square hasn't a proper obstacle.
-	 * 		|for each dir in Direction.values(): if(this.getNeighborAt(dir) == null && !canHaveAsObstacleAt(dir,this.getObstacleAt()) then new.hasWallAt(dir)
-	 * @post The method will set walls in every direction where the neighbor has walls and this square hasn't a proper obstacle.
-	 * 		|for each dir in Direction.values(): if(this.getNeighborAt(dir).hasWallAt(dir.oppositeDirection()) && !canHaveAsObstacleAt(dir,this.getObstacleAt()) then new.hasWallAt(dir) == true
-	 * @post The method will set doors in every direction where the neighbor has doors and this square hasn't a proper obstacle.
-	 * 		|for each dir in Direction.values(): if(this.getNeighborAt(dir).hasDoorAt(dir.oppositeDirection()) && !canHaveAsObstacleAt(dir,this.getObstacleAt()) then new.hasDoorAt(dir) == true && (Door new.getObstacleAt(dir)).isOpen() == (Door new.getNeighborAt(dir).getObstacleAt(dir.oppositeDirection())).isOpen()
-	 * @post The method will destroy doors en walls in every direction where the neighbor hasn't any obstacles and this square hasn't a proper obstacle.
-	 * 		|for each dir in Direction.values(): if(this.getNeighborAt(dir).getObstacleAt(dir.oppositeDirection() == null && !canHaveAsObstacleAt(dir,this.getObstacleAt()) then new.getObstacleAt(dir) == null
+	 * @post The method will set walls in every direction where there is no neighbor.
+	 * 		|for each dir in Direction.values(): 
+	 * 		|	if(this.getNeighborAt(dir) == null) 
+	 * 		|		then new.hasWallAt(dir)
+	 * @post The method will set walls in every direction where the neighbor has walls.
+	 * 		|for each dir in Direction.values(): 
+	 * 		|	if(this.getNeighborAt(dir).hasWallAt(dir.oppositeDirection()))
+	 *		|		then new.hasWallAt(dir) == true
+	 * @post The method will set doors in every direction where the neighbor has doors and the doors will have the same moveability
+	 * 		|for each dir in Direction.values(): 
+	 * 		|	if(this.getNeighborAt(dir).hasDoorAt(dir.oppositeDirection()) 
+	 * 		|		then new.hasDoorAt(dir) == true && (new.canMove(dir) == new.getNeighborAt(dir).canMove(dir.oppositeDirection()))
+	 * @post The method will destroy doors and walls in every direction where the neighbor hasn't any obstacles.
+	 * 		|for each dir in Direction.values(): 
+	 * 		|	if(this.getNeighborAt(dir).getObstacleAt(dir.oppositeDirection() == null) 
+	 * 		|		then new.getObstacleAt(dir) == null
 	 */
-	// TODO not deprecated en goedwerkend zodat copy en register neighbour kunnen gebruiken.
-	@Deprecated
 	public void fixObstacles() {
 		for (Direction dir : Direction.values()) {
-			if (!this.canHaveAsObstacleAt(dir, this.getObstacleAt(dir))) {
-				if (this.getNeighborAt(dir) == null) {
+			if (this.getNeighborAt(dir) == null) {
+				this.setObstacleAt(dir, new Wall());
+			} else {
+				if (this.getNeighborAt(dir).getObstacleAt(dir.oppositeDirection()) == null) {
+					this.setObstacleAt(dir, null);
+				}
+				if (this.getNeighborAt(dir).hasWall(dir.oppositeDirection())) {
 					this.setObstacleAt(dir, new Wall());
-				} else {
-					if (this.getNeighborAt(dir).getObstacleAt(dir.oppositeDirection()) == null) {
-						this.setObstacleAt(dir, null);
-					}
-					if (this.getNeighborAt(dir).hasWall(dir.oppositeDirection())) {
-						this.setObstacleAt(dir, new Wall());
-					}
-					if (this.getNeighborAt(dir).hasDoor(dir.oppositeDirection())) {
-						this.setObstacleAt(dir, new Door());
-						((Door) this.getObstacleAt(dir))
-								.setMoveable(((Door) this.getNeighborAt(dir).getObstacleAt(dir.oppositeDirection())).isOpen());
-					}
+				}
+				if (this.getNeighborAt(dir).hasDoor(dir.oppositeDirection())) {
+					this.setObstacleAt(dir, new Door());
+					((Door)this.getObstacleAt(dir)).setOpen(((Door)this.getNeighborAt(dir).getObstacleAt(dir.oppositeDirection())).isOpen());
 				}
 			}
 		}
