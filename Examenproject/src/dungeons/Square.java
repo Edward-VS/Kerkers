@@ -830,19 +830,16 @@ public class Square {
 	 * 
 	 * @param dir The direction in which you want to add a neighbor.
 	 * @param square The square you want to add.
-	 * @post The square will be set connected at the given direction.
-	 * 		|new.getNeighborAt(dir) == square
-	 * @throws IllegalArgumentException [MUST] The given square is not a valid neighbor.
-	 * 		|!canHaveAsNeighbor(square)
+	 * @post If this square can have the other square as neighbor, then the square will be set connected at the given direction.
+	 * 		|if(canHaveAsNeighbor(square)
+	 * 		|	then new.getNeighborAt(dir) == square
 	 * @note This method is annotated raw because the temperature is not updated 
 	 * 		and the method only works in one direction of the association of neighbors. Also the obstacles between square will not be updated.
 	 */
 	@Model
 	@Raw
-	private void setNeighborAt(Direction dir, Square square) throws IllegalArgumentException {
-		if (!canHaveAsNeighbor(square)) {
-			throw new IllegalArgumentException("The given square is not a valid square to connect!");
-		} else {
+	private void setNeighborAt(Direction dir, Square square){
+		if (canHaveAsNeighbor(square)) {
 			if (square == null) {
 				this.neighborsMap.remove(dir);
 			} else {
@@ -868,15 +865,10 @@ public class Square {
 		Square other = getNeighborAt(direction);
 		if (other != null) {
 			if (this.canHaveAsNeighbor(null) && other.canHaveAsNeighbor(null)) {
-				try {
-					this.setNeighborAt(direction, null);
-					other.setNeighborAt(direction.oppositeDirection(), null);
-					this.buildWallAt(direction);
-					other.buildWallAt(direction.oppositeDirection());
-				} catch (IllegalArgumentException e) {
-					// Should never happen
-					assert false;
-				}
+				this.setNeighborAt(direction, null);
+				other.setNeighborAt(direction.oppositeDirection(), null);
+				this.buildWallAt(direction);
+				other.buildWallAt(direction.oppositeDirection());
 			}
 		}
 	}
@@ -898,8 +890,13 @@ public class Square {
 	* 		At the place of its old connection with this square, the neighbor now has a wall.
 	* 		|(new.(old.getNeighborAt(direction)).getNeighborAt(direction.oppositeDirection()) == null
 	* 		|(new.(old.getNeighborAt(direction)).hasWallAt(direction.oppositeDirection()) == true
+	* @post If the new neighbor had a neighbor at the opposite direction,
+	* 		then the old neighbor of this neighbor will no longer have this neighbor as its neighbor.
+	* 		At the place of its old connection with this neighbor, the neighbor now has a wall.
+	* 		|(new.(old.(square.getNeighborAt(direction))).getNeighborAt(direction.oppositeDirection()) == null
+	* 		|(new.(old.(square.getNeighborAt(direction)).hasWallAt(direction.oppositeDirection()) == true
 	* @post The obstacles will be changed towards the obstacle of the neighbor.
-	* 		|new.hasSameAdjecantObstacleAt(direction) == true
+	* 		|new.hasSameAdjecantObstacleAt(direction) == true 
 	* 		|	&& old.(new.getNeighbourAt(direction).getObstacleAt(direction.oppositeDirection())) 
 	* 		|		== new.(new.getNeighbourAt(direction).getObstacleAt(direction.oppositeDirection()))
 	* @post The temperature will be set according to the newly created group.
@@ -907,15 +904,18 @@ public class Square {
 	* 		|	new.square.getTemperature() == new.calculateUpdateTemperature()
 	*/
 	public void registerNeighbor(Square square, Direction direction) {
-		// TODO implementatie
 		if (this.canHaveAsNeighbor(square) && square.canHaveAsNeighbor(this)) {
-			try {
-				this.setNeighborAt(direction, square);
-				square.setNeighborAt(direction.oppositeDirection(), this);
-			} catch (IllegalArgumentException e) {
-				// Should never happen
-				assert false;
+			if(this.getNeighborAt(direction) != null){
+				this.removeNeighbor(direction);
 			}
+			if(square.getNeighborAt(direction.oppositeDirection()) != null){
+				square.getNeighborAt(direction.oppositeDirection()).setNeighborAt(direction, null);
+				square.getNeighborAt(direction.oppositeDirection()).buildWallAt(direction);
+			}
+			this.setNeighborAt(direction, square);
+			square.setNeighborAt(direction, this);
+			this.fixObstacles();
+			this.updateTemperature();
 		}
 	}
 	
@@ -925,7 +925,7 @@ public class Square {
 	 * The temperature must be changed according to the possible new group this square is now part of.
 	 * Because you copy, the old (here called other) square will now be isolated.
 	 * 
-	 * @param other The other square from which you want to copy.
+	 * @param square The other square from which you want to copy.
 	 * @post If the given square is not null, all the neighbors will be copied to this one. The directions will be the same.
 	 * 		|if(square != null) 
 	 * 		|	then (for each direction in Direction.values(): 
@@ -949,11 +949,16 @@ public class Square {
 	 * 		|for each square in calculateGroup():
 	 * 		|	square.getTemperature() == calculateUpdateTemperature()
 	 */
-	public void copyNeighbors(Square other) {
-		
-		// TODO implementatie, gebruik makend van register en remove
-		if (other != null) {
-			this.neighborsMap = other.neighborsMap;
+	public void copyNeighbors(Square square) {
+		if(square != null){
+			for(Direction dir: Direction.values()){
+				this.removeNeighbor(dir);
+				this.setNeighborAt(dir, square.getNeighborAt(dir));
+				square.setNeighborAt(dir, null);
+				square.buildWallAt(dir);
+			}
+			this.fixObstacles();
+			this.updateTemperature();
 		}
 	}
 
@@ -969,6 +974,7 @@ public class Square {
 	 * 
 	 * @param dir The direction to move in.
 	 * @return Returns true if there is neighbor in that direction and there is no wall between them or the door is open.
+	 * 		With other words, you can move in that direction.
 	 * 		|result == ((this.getNeighborAt(dir) != null) && (!this.hasWallAt(dir)) && (if(this.hasDoorAt(dir)) then getObstacleAt(dir).isOpen())
 	 */
 	public boolean canMove(Direction dir) {
@@ -986,70 +992,56 @@ public class Square {
 		}
 	}
 
-	// TODO recursive method arraylist...
 	/**
 	 * Method to compute a group of moveable squares.
 	 * 
 	 * @return Creates a group of moveable squares. The list will contain adjecant squares that are moveable.
-	 * 		|return == ...
+	 * 		|for each dir in Direction.values():
+	 * 		|	if(this.canMove(dir)
+	 * 		|		then if(!result.contains(this.getNeighborAt(dir)))
+	 * 		|			then result.add(this.getNeighborAt(dir)) && result.addAll(this.getNeighborAt(dir).computeGroup())
+	 * @note This method is annotated raw because the method can be used even when the temperature isn't updated yet.
 	 */
+	@Raw
 	public ArrayList<Square> computeGroup() {
-		// invar: The ArrayList contains adjecant squares that are movable.
-		// No duplicates
+		// invar: The ArrayList contains squares that are connected through moveable obstacles (null and door).
+		// 		|for each square1 and square2 in group:
+		//		|	if(square1.getNeighborAt(dir) == square2)
+		//		|		then square1.canMove(dir)
+		// invar: There are no duplicates in the list.
+		//		|for each square in group:
+		//		|	group.remove(square).contains(square) == false
 		ArrayList<Square> group = new ArrayList<Square>();
 		for (Direction dir : Direction.values()) {
 			if (this.canMove(dir)) {
-				group.add(this.getNeighborAt(dir));
-				group.addAll(this.getNeighborAt(dir).computeGroup());
+				if(!group.contains(this.getNeighborAt(dir))){
+					group.add(this.getNeighborAt(dir));
+					group.addAll(this.getNeighborAt(dir).computeGroup());
+				}
 			}
 		}
 		return group;
 	}
 
 	/**
-	 * Method to merge squares in the given direction. This method applies to single squares who are already connected.
-	 * 
-	 * @param dir The direction in which you want to merge the square.
-	 * @post The new temperature will be the average temperature of both squares.
-	 * 		|new.getTemperature() == (old.getTemperature()+(old.getNeighborAt(dir)).getTemperature())/2
-	 * @post The merged square will have the same temperature as the new temperature of this one.
-	 * 		|(new.getNeighborAt(dir)).getTemperature() == new.getTemperature()
-	 * @throws IllegalArgumentException [MUST] The direction is not valid if there doesn't exist a neighbor at the given direction.
-	 * 		|getNeighborAt(dir) == null
-	 */
-	public void mergeWith(Direction dir) throws IllegalArgumentException {
-		if (this.getNeighborAt(dir) != null) {
-			this.temperature = (this.getTemperature() + this.getNeighborAt(dir).getTemperature()) / 2;
-			this.getNeighborAt(dir).setTemperature(this.getTemperature());
-		} else {
-			throw new IllegalArgumentException("There is no square to merge in that direction!");
-		}
-	}
-
-	/**
 	 * Method to merge a group of squares with another group of squares.
 	 * 
 	 * @param dir The direction of the other group.
-	 * @post The temperature of each square in this group will be the average of the squares in the two groups, taken in account the size of the two groups.
-	 * 		|for each square in calculateGroup(): square.getTemperature() == (new.computeGroup().size()*old.calculateUpdateTemperature() + new.getNeighborAt(dir).computeGroup().size()*old.getNeighborAt(dir).calculateUpdateTemperature())/(new.calculateGroup().size() + new.getNeighborAt(dir).calculateGroup().size())
-	 * @post The temperature of each square in the group of the other square will be the average of the squares in the two groups, taken in account the size of the two groups.
-	 * 		|for each square in this.getNeighborAt(dir).computeGroup(): square.getTemperature() == (new.computeGroup().size()*old.calculateUpdateTemperature() + new.getNeighborAt(dir).computeGroup().size()*old.getNeighborAt(dir).calculateUpdateTemperature())/(new.calculateGroup().size() + new.getNeighborAt(dir).calculateGroup().size())
+	 * @post The temperature of each square in this and the other group will be the average of the squares in the two groups, taken in account the size of the two groups. 
+	 * 		We can also see this now as one group.
+	 * 		|for each square in calculateGroup():
+	 * 		|	square.getTemperature() == square.calculateUpdateTemperature()
 	 * @throws IllegalArgumentException [MUST] The direction is not valid if there doesn't exist a neighbor at the given direction.
 	 * 		|getNeighborAt(dir) == null
+	 * @note This method is annotated raw because the method can be used when the temperature isn't updated yet.
 	 */
-	public void mergeWithGroup(Direction dir) {
+	@Raw
+	public void mergeWith(Direction dir) {
 		if (this.getNeighborAt(dir) != null) {
 			this.updateTemperature();
-			this.getNeighborAt(dir).updateTemperature();
-			int average = (this.getTemperature() * this.computeGroup().size() + this.getNeighborAt(dir).getTemperature()
-					* this.getNeighborAt(dir).computeGroup().size())
-					/ (this.computeGroup().size() + this.getNeighborAt(dir).computeGroup().size());
-			for (Square square : this.computeGroup()) {
-				square.setTemperature(average);
-			}
-			for (Square square : this.getNeighborAt(dir).computeGroup()) {
-				square.setTemperature(average);
-			}
+		}
+		else{
+			throw new IllegalArgumentException("There is no neighbor at the given direction!");
 		}
 	}
 
