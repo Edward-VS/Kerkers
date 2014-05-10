@@ -1,56 +1,80 @@
-/**
- * The package for a roleplaying game.
- */
 package dungeons.util;
 
+import be.kuleuven.cs.som.annotate.Basic;
+import be.kuleuven.cs.som.annotate.Immutable;
+import dungeons.util.Point;
+
 /**
- * Enum with the different directions.
+ * Enumeration of directions.
  * 
- * @author Christof Vermeersch & Edward Van Sieleghem
+ * @author Edward Van Sieleghem & Christof Vermeersch
+ *
  */
 public enum Direction {
-	NORTH, WEST, SOUTH, EAST, UP, DOWN;
+	NORTH(new Point(0,1,0)), WEST(new Point(-1,0,0)), SOUTH(new Point(0,-1,0)), EAST(new Point(1,0,0)), UP(new Point(0,0,1)), DOWN(new Point(0,0,-1));
 	
-	// TODO Controleren van specificatie.
+	private Point relPosition;
+	
 	/**
-	 * Method to calculate the opposite direction.
+	 * Construct a new direction with the given position relative to the origin in which the
+	 * direction should point.
 	 * 
-	 * @return If this direction is NORTH, then the opposite direction will be SOUTH
-	 * 		|If(this == Direction.NORTH) => return == Direction.SOUTH
-	 * @return If this direction is WEST, then the opposite direction will be EAST
-	 * 		|If(this == Direction.WEST) => return == Direction.EAST
-	 * @return If this direction is SOUTH, then the opposite direction will be NORTH
-	 * 		|If(this == Direction.SOUTH) => return == Direction.NORTH	
-	 * @return If this direction is EAST, then the opposite direction will be WEST
-	 * 		|If(this == Direction.EAST) => return == Direction.WEST
-	 * @return If this direction is UP, then the opposite direction will be DOWN
-	 * 		|If(this == Direction.UP) => return == Direction.DOWN 
-	 * @return If this direction is DOWN, then the opposite direction will be UP
-	 * 		|If(this == Direction.DOWN) => return == Direction.UP	 
+	 * @param x
+	 * 		The position relative to the origin in which this direction should point.
+	 * @post TODO
 	 */
-	public Direction oppositeDirection(){
-		Direction thisDirection = this;
-		Direction oppositeDirection = null;
-		switch(thisDirection){
-		case NORTH: 
-			oppositeDirection = SOUTH;
-			break;
-		case WEST:
-			oppositeDirection = EAST;
-			break;
-		case SOUTH:
-			oppositeDirection = NORTH;
-			break;
-		case EAST:
-			oppositeDirection = WEST;
-			break;
-		case UP:
-			oppositeDirection = DOWN;
-			break;
-		case DOWN:
-			oppositeDirection = UP;
-			break;
-		}
-		return oppositeDirection;
+	private Direction(Point relPosition){
+		this.relPosition = relPosition;
 	}
+	
+	/**
+	 * Get the position relative to the origin in which this direction points.
+	 */
+	@Basic @Immutable
+	public Point getRelativePosition(){
+		return relPosition;
+	}
+	
+	/**
+	 * Get the position in this direction of the given position.
+	 * 
+	 * @param position
+	 * 		A position
+	 * @return The relative position associated with this direction added to the given position
+	 * 		| result == position.add(getRelativePosition())
+	 */
+	public Point getPointInThisDirectionOf(Point position){
+		return position.add(relPosition);
+	}
+	
+	/**
+	 * Get the inverse of this direction.
+	 * 
+	 * @return The opposite direction of the given direction.
+	 * 		| this == Direction.NORTH => result == Direction.SOUTH
+	 *		| this == Direction.SOUTH => result == Direction.NORTH
+	 *		| this == Direction.EAST => result == Direction.WEST
+	 *		| this == Direction.WEST => result == Direction.EAST
+	 *		| this == Direction.UP => result == Direction.DOWN
+	 *		| this == Direction.DOWN => result == Direction.UP
+	 */
+	@Immutable
+	public Direction oppositeDirection(){
+		switch(this){
+		case DOWN:
+			return UP;
+		case EAST:
+			return WEST;
+		case NORTH:
+			return SOUTH;
+		case SOUTH:
+			return NORTH;
+		case UP:
+			return DOWN;
+		case WEST:
+			return EAST;
+		}
+		return null; // will never happen
+	}
+	
 }

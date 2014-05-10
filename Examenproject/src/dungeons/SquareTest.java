@@ -99,7 +99,8 @@ public class SquareTest {
 	/**
 	 * Test method for setTemperature(). Followed by an exception method.
 	 */
-	@Test
+	//TODO set temperature is private
+	/*@Test
 	public void testSetTemperature() {
 		testSquare4.setTemperature(30);
 		assertEquals(testSquare4.getTemperature(), 30);
@@ -108,7 +109,7 @@ public class SquareTest {
 	public void testSetTemperatureFail() {
 		testSquare4.setTemperature(8000);
 		fail("The exception must be thrown");
-	}
+	}*/
 
 
 	/**
@@ -166,6 +167,7 @@ public class SquareTest {
 	 */
 	@Test
 	public void testGetObstacleAt() {
+		//TODO zeker geen instanceof in in een test gebruiker...
 		assertTrue(testSquare4.getObstacleAt(Direction.NORTH) instanceof Door);
 		assertTrue(testSquare4.getObstacleAt(Direction.SOUTH) instanceof Wall);
 		testSquare4.destroyWallAt(Direction.SOUTH);

@@ -2,9 +2,14 @@ package dungeons;
 
 import static org.junit.Assert.*;
 
+import java.util.ArrayList;
+
 import org.junit.Before;
 import org.junit.Test;
 
+import dungeons.exception.IllegalMaximumDimensionsException;
+import dungeons.exception.IllegalSubDungeonAtPositionException;
+import dungeons.exception.IllegalSubDungeonException;
 import dungeons.util.Direction;
 import dungeons.util.Point;
 import dungeons.util.SquareIterator;
@@ -36,20 +41,17 @@ public class SquareDungeonTest {
 		// |1 2]3|
 		//  - - -
 		sqrDun = new SquareDungeon(new Point(3,3,1));
-		sqrDun.addAsSquareAt(new Square(), new Point(0,0,0)); // 1
+		sqrDun.addAsSquareAt(new Square(13), new Point(0,0,0)); // 1
 		square_1_0_0 = new Square(); /* 2 */
 		sqrDun.addAsSquareAt(square_1_0_0, new Point(1,0,0), Direction.WEST); // 2
 		sqrDun.addAsSquareAt(new Square(), new Point(2,0,0)); // 3
-		sqrDun.addAsSquareAt(new Square(), new Point(0,1,0)); // 4
+		sqrDun.addAsSquareAt(new Square(-5), new Point(0,1,0)); // 4
 		sqrDun.addAsSquareAt(new Square(), new Point(1,1,0)); // 5
 		sqrDun.addAsSquareAt(new Square(), new Point(2,1,0), Direction.SOUTH); // 6
 		sqrDun.addAsSquareAt(new Square(), new Point(0,2,0), Direction.SOUTH); // 7
 		sqrDun.addAsSquareAt(new Square(), new Point(1,2,0), Direction.SOUTH, Direction.WEST); // 8
 		sqrDun.buildDoor(new Point(1,0,0), Direction.EAST, true); // an open door between 2 and 3
-		
-		// we set some random temperatures in the rooms of the final dungeon
-		sqrDun.getSquareAt(new Point(0,0,0) /*1*/).setTemperature(13);
-		sqrDun.getSquareAt(new Point(0,1,0) /*4*/).setTemperature(-5);
+		// Note that some random temperatures were set for more conclusive tests
 		
 		// some terminated structures
 		trmSqr = new Square();
@@ -278,11 +280,53 @@ public class SquareDungeonTest {
 	}
 	
 	
+	@Test
+	public void testComputeGroupInDungeon() throws IllegalMaximumDimensionsException{
+		// This test is an extension of the test testComputeGroup() in SquareTest
+		// Create a ring that is intermittent at one point
+		SquareDungeon sqrDun = new SquareDungeon(new Point(3,3,1));
+		Square s1 = new Square();
+		Square s2 = new Square();
+		Square s3 = new Square();
+		Square s4 = new Square();
+		Square s5 = new Square();
+		Square s6 = new Square();
+		Square s7 = new Square();
+		Square s8 = new Square();
+		sqrDun.addAsSquareAt(s1, new Point(0,0,0));
+		sqrDun.addAsSquareAt(s2, new Point(0,1,0), Direction.SOUTH);
+		sqrDun.addAsSquareAt(s3, new Point(0,2,0), Direction.SOUTH);
+		sqrDun.addAsSquareAt(s4, new Point(1,2,0), Direction.WEST);
+		sqrDun.addAsSquareAt(s5, new Point(2,2,0), Direction.WEST);
+		sqrDun.addAsSquareAt(s6, new Point(2,1,0), Direction.NORTH);
+		sqrDun.addAsSquareAt(s7, new Point(2,0,0), Direction.NORTH);
+		sqrDun.addAsSquareAt(s8, new Point(1,0,0), Direction.EAST);
+		assertTrue(s1.hasWall(Direction.EAST)); // the breakpoint
+		
+		ArrayList<Square> group = s1.computeGroup();
+		assertEquals(8, group.size());
+		assertTrue(group.contains(s5));
+		assertTrue(group.contains(s6));
+		
+		//we reduce the size of the group
+		//sqrDun.buildWall(new Point(2,2,0), Direction.SOUTH);
+		s5.buildWallAt(Direction.SOUTH);
+		assertTrue(s5.hasWall(Direction.SOUTH));
+		assertTrue(s6.hasWall(Direction.NORTH));
+		
+		group = s1.computeGroup();
+		assertEquals(5, group.size());
+		assertTrue(group.contains(s5));
+		assertFalse(group.contains(s6));
+	}
+	
+	
+	
 	/*************************************************************
 	 * TERMINATION TESTS
 	 **************************************************************/
 	@Test
-	public void testTerminate() throws IllegalSubDungeonAtPositionException, IllegalMaximumDimensionsException{
+	public void testTerminate() throws IllegalSubDungeonAtPositionException, IllegalMaximumDimensionsException, IllegalSubDungeonException{
 		//first add out square dungeon to a CompositeDungeon for illustrative purposes.
 		CompositeDungeon cmpDun = new CompositeDungeon(new Point(3,3,1));
 		cmpDun.addAsSubDungeonAt(sqrDun, new Point(0,0,0));

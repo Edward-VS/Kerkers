@@ -5,6 +5,7 @@ import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
 
+import dungeons.exception.IllegalMaximumDimensionsException;
 import dungeons.util.Point;
 
 /**
@@ -24,8 +25,6 @@ import dungeons.util.Point;
  * @author Edward Van Sieleghem & Christof Vermeersch
  */
 public class DungeonTest {
-
-
 	
 	private Dungeon dungeon_dim500;
 	

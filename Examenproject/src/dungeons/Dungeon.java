@@ -7,6 +7,7 @@ import java.util.Random;
 import be.kuleuven.cs.som.annotate.Basic;
 import be.kuleuven.cs.som.annotate.Model;
 import be.kuleuven.cs.som.annotate.Raw;
+import dungeons.exception.IllegalMaximumDimensionsException;
 import dungeons.util.Direction;
 import dungeons.util.Point;
 import dungeons.util.SquareIterator;
@@ -36,7 +37,6 @@ import dungeons.util.SquareIterator;
  * 
  * TODO exceptions must be more descriptive
  * TODO methods build/destroy obstacles make no sense at this moment
- * TODO collapse in Square?
  * 
  * @invar A dungeon must always have maximum dimensions that are smaller or equal to the maximum allowed dimensions (5000,5000,5000),
  * 		bigger than (0,0,0), in compliance with the dimensions of its parent dungeon (if any) and legal in any other way.
@@ -112,7 +112,7 @@ public abstract class Dungeon implements Iterable<Square>{
 			return false;
 		if(!maximumDimensions.isEqualOrSmallerThanValue(ABSOLUTE_MAXIMUM_DIMENSIONS))
 			return false;
-		if(maximumDimensions.isEqualOrSmallerThanValue(0))
+		if(maximumDimensions.isEqualOrSmallerThanValue(0)) // TODO Dimensions must be bigger or equal than (1,1,1)
 			return false;
 		if(getParentDungeon() != null && getParentDungeon().overlapsWithOtherSubDungeon(this, maximumDimensions, getParentDungeon().getPositionOfSubDungeon(this)))
 			return false;
@@ -152,14 +152,14 @@ public abstract class Dungeon implements Iterable<Square>{
 	 *		The new maximum dimensions for this dungeon
 	 * @post The maximum dimensions of this dungeon are the given maximum dimensions.
 	 *		| new.getmaximumDimensions() == maximumDimensions
-	 * @throws IllegalMaximumDimensionsException
+	 * @throws IllegalMaximumDimensionsException(maximumDimensions)
 	 *		[MUST] The given new maximum dimensions are not legal for this dungeon
 	 *		possibly because smaller than the current dimensions.
-	 *		| !canAcceptAsNewMaximumDimensions()
+	 *		| !canAcceptAsNewMaximumDimensions(maximumDimensions)
 	 */
 	public void changeMaximumDimensions(Point maximumDimensions) throws IllegalMaximumDimensionsException {
 		if (!canAcceptAsNewMaximumDimensions(maximumDimensions))
-			throw new IllegalMaximumDimensionsException();
+			throw new IllegalMaximumDimensionsException(maximumDimensions);
 		this.maximumDimensions = maximumDimensions;
 	}
 	
@@ -170,14 +170,14 @@ public abstract class Dungeon implements Iterable<Square>{
 	 *		The new maximum dimensions for this dungeon
 	 * @post The maximum dimensions of this dungeon are the given maximum dimensions.
 	 *		| new.getmaximumDimensions() == maximumDimensions
-	 * @throws IllegalMaximumDimensionsException
+	 * @throws IllegalMaximumDimensionsException(maximumDimnesions)
 	 *		[MUST] The given new maximum dimensions are not legal for this dungeon.
 	 *		| !canAcceptAsMaximumDimensions()
 	 */
 	@Model @Raw
-	private void setMaximumDimensions(Point maximumDimensions) throws IllegalMaximumDimensionsException {
+	protected void setMaximumDimensions(Point maximumDimensions) throws IllegalMaximumDimensionsException {
 		if (!canHaveAsMaximumDimensions(maximumDimensions))
-			throw new IllegalMaximumDimensionsException();
+			throw new IllegalMaximumDimensionsException(maximumDimensions);
 		this.maximumDimensions = maximumDimensions;
 	}
 	
@@ -482,6 +482,7 @@ public abstract class Dungeon implements Iterable<Square>{
 	public void buildWall(Square square, Direction direction){
 		if(square != null)
 			square.buildWallAt(direction);
+		//TODO Does not work?
 	}
 	
 	/**
@@ -546,7 +547,7 @@ public abstract class Dungeon implements Iterable<Square>{
 	
 	/**
 	 * If possible, let the given square collapse.
-	 * 
+	 * TODO doc
 	 * @param square
 	 * 		The square to collapse
 	 * @pre the given square belong to the root of this dungeon
@@ -579,7 +580,7 @@ public abstract class Dungeon implements Iterable<Square>{
 		
 		removeAsSquare(square);
 		removeAsSquare(above);
-		addAsSquareAt(above, pos);
+		addAsSquareAt(above, pos); // temperature updates
 		
 		Random rand = new Random(System.currentTimeMillis());
 		if(rand.nextFloat() > 0.6f && above.getNeighborAt(Direction.DOWN) != null)

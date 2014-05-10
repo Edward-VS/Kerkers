@@ -10,10 +10,13 @@ import java.util.NoSuchElementException;
 
 import be.kuleuven.cs.som.annotate.Basic;
 import be.kuleuven.cs.som.annotate.Raw;
+import dungeons.exception.IllegalMaximumDimensionsException;
+import dungeons.exception.IllegalSubDungeonAtPositionException;
+import dungeons.exception.IllegalSubDungeonException;
 import dungeons.util.Direction;
 import dungeons.util.Point;
 import dungeons.util.SquareIterator;
-// little test
+
 /**
  * A CompositeDungeon is a Dungeon that contains other dungeons as its sub dungeons. Composite dungeons can not
  * contain squares in a direct way (they don't store references of squares themselves), but all the squares of
@@ -40,8 +43,6 @@ import dungeons.util.SquareIterator;
  * 
  * Adding and removing sub dungeons can be done in constant time although computing the new environment of all the squares
  * in the sub dungeon might be more time demanding.
- * 
- * TODO constant time method for adding and removing sub dungeons
  * 
  * @see Documentation of Dungeon is also valid.
  *
@@ -321,17 +322,22 @@ public class CompositeDungeon extends Dungeon{
 	 * Returns an iterator that iterates over all the squares in this dungeon from front(y)
 	 * to back, left(x) to right and bottom(z) to top (relative to the coordinate system of this dungeon).
 	 * 
-	 * @note Each subdungeon will have such an iterator, but it is not said that ALL the elements of one sub
-	 * dungeon must come before those of ALL other sub dungeons in the iteration. It is certain though, that the next
-	 * element in iteration will be one of the front elements of the iterators of the sub-dungeons. As a result, this
-	 * iterator 'grabs' all the elements at the front of the sub-dungeon-iterators, and return the smallest
-	 * (using compareTo() of the position of squares relative to the origin of this dungeon.)
+	 * @return A new iterator
 	 */
 	@Override
 	public SquareIterator iterator() {
 		return new CompositeDungeon.Iterator(); 
 	}
 	
+	/**
+	 * An iterator that iterates over the square of a CompositeDungeon.
+	 * 
+	 * Each sub-dungeon will have a similar iterator, but it is not said that ALL the elements of one sub
+	 * dungeon must come before those of ALL other sub dungeons in the iteration over this dungeon.
+	 * It is certain though, that the next element in iteration will be one of the front elements of the iterators
+	 * of the sub-dungeons. As a result, this iterator 'grabs' all the elements at the front of the sub-dungeon-iterators,
+	 * and return the smallest (using compareTo() of the position of squares relative to the origin of this dungeon.)
+	 */
 	public class Iterator implements SquareIterator {
 		//TODO doc
 		// Iterators of sub-dungeons
@@ -558,7 +564,8 @@ public class CompositeDungeon extends Dungeon{
 	 * @param subDungeon
 	 * 		The sub dungeon to add to this composite dungeon
 	 * @param position
-	 * 		The position to the given square to
+	 * 		The position where the origin of the sub dungeon will be placed relative to the origin
+	 * 		of this dungeon.
 	 * @post This dungeon contains the given sub dungeon
 	 * 		| new.hasAsSubDungeon(subDungeon)
 	 * @post The given sub dungeon refers to this composite dungeon as its
@@ -567,53 +574,143 @@ public class CompositeDungeon extends Dungeon{
 	 * @post All the squares in the given sub dungeon contain proper neighbors
 	 * 		| for each square in subDungeon.getSquares():
 	 * 		|	for each direction in Direction.values():
-	 * 		|		TODO find your proper neighbor in the root of this dungeon
-	 * @effect Each square in this dungeon fixes its obstacles
-	 * 		| for each square in subDungeon.getSquares():
-	 * 		|	square.fixObstacles()
-	 * @throws IllegalPositionException [MUST]
+	 * 		|		getRootDungeon().getSquareInDirectionOfPosition(position.add(getPositionInRoot())
+	 * 		|						.add(subDungeon.getPositionOfSquare(square)), direction)
+	 * 		|			== square.getNeighborAt(direction)
+	 * @throws IllegalSubDungeonAtPositionException(subDungeon, position) [MUST]
 	 * 		The given sub dungeon can not be placed on the given position.
 	 * 		| !canHaveAsSubDungeonAt(subDungeon, position)
-	 * @throws IllegalSubDungeonException [MUST]
+	 * @throws IllegalSubDungeonException(subDungeon) [MUST]
 	 * 		The given sub dungeon belong to another parent dungeon.
 	 * 		| subDungeon.getParentDungeon() != null
-	 * TODO correct doc... exceptions etc..
 	 */
-	public void addAsSubDungeonAt(Dungeon subDungeon, Point position) throws IllegalSubDungeonAtPositionException{
+	public void addAsSubDungeonAt(Dungeon subDungeon, Point position) throws IllegalSubDungeonAtPositionException, IllegalSubDungeonException{
 		if(!canHaveAsSubDungeonAt(subDungeon, position))
-			throw new IllegalSubDungeonAtPositionException();
+			throw new IllegalSubDungeonAtPositionException(subDungeon, position);
 		if(subDungeon.getParentDungeon() != null)
-			throw new IllegalSubDungeonAtPositionException();
+			throw new IllegalSubDungeonException(subDungeon);
 		
 		subDungeons.put(position, subDungeon);
 		subDungeon.setParentDungeon(this);
 		
-		//TODO
+		// See code comment of addAsSquareAt() in SquareDungeon about invariants
 		
-		/*Point posInRoot = getPosistionInRoot(); // position of this dungeon in root
+		
+		// Neighbors of squares are according to the root dungeon, so we get some information of our root.
+		Point posInRoot = position.add(getPositionInRoot()); // position of square in root in my root
 		Dungeon root = getRootDungeon(); // my root
 		
-		for(Square s: subDungeon.getSquares()){
-			Point myPosInRoot = getPositionOfSquare(s).add(posInRoot);
+		Point maxDim = subDungeon.getMaximumDimensions();
+		
+		// register new neighbors for squares that are at the exterior of the added sub dungeon.
+		SquareIterator it = subDungeon.iterator();
+		while(it.hasNext()){
+			SimpleEntry<Point, Square> entry= it.nextEntry();
+			Square square = entry.getValue();
+			Point pos = entry.getKey();
+			Point myPosInRoot = pos.add(posInRoot);
 			
-			for(Direction d: Direction.values()){
-				Square n = root.getSquareInDirectionOfPosition(myPosInRoot, d);
-				if(n != null)
-					s.registerNeighbor(n, d);
-			}
-		}*/
+			// The new sub dungeon was its own root before it was added -> new neighbors should be registered instead of replaced.
+			
+			// you are as much to the WEST (left) as possible in your sub dungeon
+			if(pos.getX() == 0)
+				//this may try to register null as neighbor, but that will do nothing.
+				square.registerNeighbor(root.getSquareInDirectionOfPosition(myPosInRoot, Direction.WEST),  Direction.WEST);
+			if(pos.getX()+1 == maxDim.getX())
+				square.registerNeighbor(root.getSquareInDirectionOfPosition(myPosInRoot, Direction.EAST),  Direction.EAST);
+			if(pos.getY() == 0)
+				square.registerNeighbor(root.getSquareInDirectionOfPosition(myPosInRoot, Direction.SOUTH),  Direction.SOUTH);
+			if(pos.getY()+1 == maxDim.getY())
+				square.registerNeighbor(root.getSquareInDirectionOfPosition(myPosInRoot, Direction.NORTH),  Direction.NORTH);
+			if(pos.getZ() == 0)
+				square.registerNeighbor(root.getSquareInDirectionOfPosition(myPosInRoot, Direction.DOWN),  Direction.DOWN);
+			if(pos.getZ()+1 == maxDim.getZ())
+				square.registerNeighbor(root.getSquareInDirectionOfPosition(myPosInRoot, Direction.UP),  Direction.UP);
+			//Note: temperature does not need and update since walls are build between new neighbors
+		}
 	}
 	
-	//TODO
+	/**
+	 * Remove the given sub dungeon form this dungeon.
+	 * [Convenience method for removeAsSubDungeon(Point)]
+	 * 
+	 * @param subDungeon
+	 * 		The subDungeon to remove
+	 * @effect Remove the sub-dungeon at the position of the given sub-dungeon from this dungeon.
+	 * 		| removeAsSubDungeonAt(getPositionOfSubDungeon(subDungeon))
+	 * @throws IllegalArgumentException
+	 * 		[MUST] The given dungeon is not a sub-dungeon of this dungeon.
+	 * 		| !hasAsSubDungeon(subDungeon)
+	 */
 	public void removeAsSubDungeon(Dungeon subDungeon) throws IllegalArgumentException{
-		if(!hasAsSubDungeon(subDungeon))
-			throw new IllegalArgumentException("The given dungeon is not a sub dungeon of this dungeon");
-		
-		subDungeons.remove(getPositionOfSubDungeon(subDungeon));
-		subDungeon.setParentDungeon(null);
-		//for (Square s: subDungeon.getS)
-		//TODO
+		removeAsSubDungeonAt(getPositionOfSubDungeon(subDungeon));
 	}
+	
+	/**
+	 * Remove the sub-dungeon at the given position from this dungeon
+	 * 
+	 * @param position
+	 * 		The position of the sub-dungeon to remove.
+	 * @post The subDungeon at the given position is not effective anymore
+	 * 		| !new.hasAsSubDungeon(this.getSubDungeonAt(position))
+	 * @post All the neighbor association between squares in the sub dungeon at the given position,
+	 * 		and squares of the root of this dungeon are broken. This means that squares in the removed
+	 * 		sub dungeon can only have neighbors that are also in that sub dungeon.
+	 * 		| for each rootSquare in getRootDungeon().getSquares():
+	 * 		|	for each subSquare in this.getSubDungeonAt(position).getSquares():
+	 * 		|		if rootSquare != subSquare
+	 * 		|		then !rootSquare.hasAsNeighbor(subSquare)
+	 * @post The sub dungeon at the given position has no parent dungeon anymore. As an effect it 
+	 * 		becomes root.
+	 * 		| (new this.getSubDungeonAt(position)).getParentDungeon() == null
+	 * @throws IllegamArgumentException
+	 * 		[MUST] This dungeon has no sub dungeon at the given position.
+	 * 		| getSubDungeonAt(position) == null
+	 * @note This method perform better than removeAsSubDungeon(Dungeon)
+	 */
+	public void removeAsSubDungeonAt(Point position) throws IllegalArgumentException{
+		Dungeon subDungeon = subDungeons.get(position);
+		if(subDungeon == null)
+			throw new IllegalArgumentException("The given position does not contain a sub dungeon");
+		// Should also check if i can have a non effective sub dungeon at the given position?
+		
+		// See code comment of addAsSquareAt() in SquareDungeon about invariants
+		
+		subDungeons.remove(position);
+		subDungeon.setParentDungeon(null);
+		
+		Point maxDim = subDungeon.getMaximumDimensions();
+		
+		SquareIterator it = subDungeon.iterator();
+		while(it.hasNext()){
+			SimpleEntry<Point, Square> entry= it.nextEntry();
+			Square square = entry.getValue();
+			Point pos = entry.getKey();
+			
+			// We remove neighbors that are at the exterior of the sub dungeon. 
+			
+			// you are as much to the WEST (left) as possible
+			if(pos.getX() == 0)
+				square.removeNeighbor(Direction.WEST);
+			// you are as much to the EAST (right) as possible
+			if(pos.getX()+1 == maxDim.getX())
+				square.removeNeighbor(Direction.EAST);
+			// you are as much to the SOUTH (front) as possible
+			if(pos.getY() == 0)
+				square.removeNeighbor(Direction.SOUTH);
+			// you are as much to the NORTH (back) as possible
+			if(pos.getY()+1 == maxDim.getY())
+				square.removeNeighbor(Direction.NORTH);
+			// you are as much DOWN as possible
+			if(pos.getZ() == 0)
+				square.removeNeighbor(Direction.DOWN);
+			// you are as much to the NORTH (back) as possible
+			if(pos.getZ()+1 == maxDim.getZ())
+				square.removeNeighbor(Direction.UP);
+		}
+	}
+	
+	
 	
 	/**
 	 * Get all the levels and shafts that are contained within this dungeon.

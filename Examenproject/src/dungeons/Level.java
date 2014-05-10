@@ -1,6 +1,7 @@
 package dungeons;
 
 import be.kuleuven.cs.som.annotate.Raw;
+import dungeons.exception.IllegalMaximumDimensionsException;
 import dungeons.util.Point;
 
 /**
@@ -33,16 +34,19 @@ public class Level extends SquareDungeon{
 	 *		The dimensions outside of which no squares can be added.
 	 * @post The maximum dimensions of this dungeon are set to the given maximum dimensions
 	 * 		| new.getMaximumDimensions() == maximumDimensions
-	 * @throws IllegalArgumentException
+	 * @throws IllegalMaximumDimensionsException(maximumDimensions)
 	 * 		[MUST] The given maximum dimensions are not legal
 	 * 		| !canHaveAsMaximumDimensions(maximumDimensions)
 	 */
-	public Level(Point maximumDimensions) throws IllegalArgumentException {
+	public Level(Point maximumDimensions) throws IllegalMaximumDimensionsException{
 		super(maximumDimensions);
-		// TODO Auto-generated constructor stub
 	}
 	
-	// -+-+-+-+- DIMENSIONS -+-+-+-+- //
+	
+	
+	/***********************************************************
+	 * DIMENSIONS
+	 ***********************************************************/
 	
 	/**
 	 * Check whether the given maximum dimensions are valid for this dungeon.
@@ -65,19 +69,16 @@ public class Level extends SquareDungeon{
 	 *		|	&& !getParentDungeon().overlapsWithOtherSubDungeon(this, maximumDimensions))
 	 *		|	then result == false
 	 *		Else true.
+	 * @return Else if the given maximum dimensions have a z-coordinate that is bigger than 1, then false.
+	 * 		| if  
 	 */
 	@Raw
 	public boolean canHaveAsMaximumDimensions(Point maximumDimensions) {
-		if(maximumDimensions == null)
+		if(!super.canHaveAsMaximumDimensions(maximumDimensions))
 			return false;
-		if(!maximumDimensions.isEqualOrSmallerThanValue(ABSOLUTE_MAXIMUM_DIMENSIONS))
+		if(maximumDimensions.getZ() != 1)
 			return false;
-		if(maximumDimensions.isEqualOrSmallerThanValue(0))
-			return false;
-		/*if(getParentDungeon() != null && !getParentDungeon().overlapsWithOtherSubDungeon(this, maximumDimensions))
-			return false;*/
 		return true;
-		//TODO call super
 	}
 	
 }
