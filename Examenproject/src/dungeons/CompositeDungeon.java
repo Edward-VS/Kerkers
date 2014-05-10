@@ -13,7 +13,7 @@ import be.kuleuven.cs.som.annotate.Raw;
 import dungeons.util.Direction;
 import dungeons.util.Point;
 import dungeons.util.SquareIterator;
-
+// little test
 /**
  * A CompositeDungeon is a Dungeon that contains other dungeons as its sub dungeons. Composite dungeons can not
  * contain squares in a direct way (they don't store references of squares themselves), but all the squares of
