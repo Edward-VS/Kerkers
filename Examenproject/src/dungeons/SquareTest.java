@@ -237,6 +237,7 @@ public class SquareTest {
 	@Test
 	public void testMergeWith() {
 		testSquare4.mergeWith(Direction.EAST);
+		// TODO gebruik assert equals
 		assertTrue(testSquare4.getTemperature() == -20);
 		assertTrue(testSquare3.getTemperature() == -20);
 	}
