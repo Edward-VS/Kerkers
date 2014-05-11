@@ -2,7 +2,7 @@ package dungeons;
 
 import static org.junit.Assert.*;
 
-import java.util.ArrayList;
+import java.util.Collection;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -303,7 +303,7 @@ public class SquareDungeonTest {
 		sqrDun.addAsSquareAt(s8, new Point(1,0,0), Direction.EAST);
 		assertTrue(s1.hasWall(Direction.EAST)); // the breakpoint
 		
-		ArrayList<Square> group = s1.computeGroup();
+		Collection<Square> group = s1.computeGroup();
 		assertEquals(8, group.size());
 		assertTrue(group.contains(s5));
 		assertTrue(group.contains(s6));

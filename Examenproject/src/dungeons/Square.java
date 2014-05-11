@@ -6,13 +6,24 @@ package dungeons;
 import java.util.EnumMap;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.Set;
 
 import be.kuleuven.cs.som.annotate.*;
 import dungeons.util.*;
 import dungeons.obstacle.*;
 
 /**
+ * TODO algemeen:
+ * 	-pre concdities op argumenten van methoden, of extra condities verwerken in
+ * 		de documentatie van methoden -> implementatie moeten rekening kunnen houden met null waarden.
+ *  - verwissel argument volgorde van methoden zoals canHaveAsObstacleAt (logischer)
+ *  - netter zijn in formele logica: bv. veelal zijn haakjes net achter 'if' overbodig
+ *  - kweet nie zeker of calculateUpdateTemperature zal werken in de tests
+ *  - Eventuele oplossing voor alle liskov problemen: twee aparte enumMappen, één voor door en één voor wall.
+ *  - klasse documentatie
+ *  
  * A class for the creation of objects of Squares.
  * 
  * @author Christof Vermeersch & Edward Van Sieleghem
@@ -67,7 +78,11 @@ public class Square {
 		}
 	}
 
-	/* TERMINATION */
+	
+	
+	/***********************************************************
+	 * TERMINATION
+	 ***********************************************************/
 
 	/**
 	 * Method to check if the square is terminated.
@@ -78,7 +93,10 @@ public class Square {
 	}
 
 	/**
-	 * Terminator
+	 * Terminator, to tear down bidirectional association between neighbors.
+	 * !NOTE! This terminator lacks in the fact that it is unable the check whether the square
+	 * is still present in any Dungeon. If it is still present, but in a terminated state, then
+	 * invariants of Dungeon are broken!
 	 * 
 	 * @post The square is set terminated.
 	 * 		|new.isTerminated() == true
@@ -104,7 +122,12 @@ public class Square {
 	 */
 	private boolean isTerminated;
 
-	/* TEMPERATURE (Defensive) */
+	
+	
+	
+	/***********************************************************
+	 * TEMPERATURE (Defensive)
+	 ***********************************************************/
 
 	/**
 	 * Inspector to check the temperature.
@@ -228,25 +251,16 @@ public class Square {
 		return average;
 	}
 
-	//TODO
 	/**
 	 * Method to set the temperature.
 	 * 
-	 * @param temp The specified temperature.
+	 * @param temp
+	 * 		The specified temperature.
 	 * @post The current temperature is set to the given one.
-	 * 		|new.getTemperature() == temp
+	 * 		| new.getTemperature() == temp
 	 * @throws IllegalArgumentException [MUST] The given temperature is not valid.
-	 * 		|!isValidTemperature(temp) || !new.hasProperTemperature()
+	 * 		| !isValidTemperature(temp)
 	 */
-	private void setTemperatureOld(int temp) throws IllegalArgumentException {
-		int oldTemperature = this.getTemperature();
-		this.temperature =  temp;
-		if((!this.hasProperTemperature())||(!Square.isValidTemperature(temp))){
-			this.temperature = oldTemperature;
-			throw new IllegalArgumentException("The temperature is not valid!");
-		}
-	}
-	
 	private void setTemperature(int temp) throws IllegalArgumentException {
 		if(!Square.isValidTemperature(temp))
 			throw new IllegalArgumentException("The temperature is not valid!");
@@ -361,7 +375,13 @@ public class Square {
 	 */
 	private static int heatDamageAbove = 35;
 
-	/* BOUNDARIES (Total) */
+	
+	
+	
+	
+	/***********************************************************
+	 * BOUNDARIES (Total)
+	 ***********************************************************/
 
 	/**
 	 * Inspector to retrieve all the obstacles of a square.
@@ -515,6 +535,9 @@ public class Square {
 	 */
 	public boolean canHaveAsObstacleAtOld(Direction dir, Obstacle obstacle) {
 		//werkt niet
+		// Voor gewone square: elk obstakel mag (inclusief null), behalve als je geen neighbor hebt in die richting. Dan mag enkel een door
+		// Voor rock: enkel walls mogen 
+		// In teminated staat mogen ook enkel walls
 		return obstacle.canBeAnObstacleAt(this, dir);
 	}
 
@@ -559,33 +582,52 @@ public class Square {
 	}
 
 	/**
-	 * Method to build doors at given direction.
+	 * Build a closed door at the given direction.
 	 *
-	 * @param dir The direction in which you want to add a wall.
-	 * @post If it is possible to set a door, the door will be set at the given direction.
-	 * 		The door will also be set open.
-	 * 		|if(canHaveAsObstacle(dir, new Door()) 
-	 * 		|	then new.hasDoor(dir) == true && new.isOpen(dir)
-	 * @post If the square has a neighbor at the given direction and the building of a door is possible in both squares, 
-	 * 		then a door will be set in both the adjecant squares at opposite directions.
-	 * 		The door will also be open.
-	 * 		|if(getNeighbor(dir) != null)
-	 * 		|	if(getNeighborAt(dir).canHaveAsObstacle(dir.oppositeDirection(), new Door()) && this.canHaveAsObstacle(dir, new Door())) 
-	 * 		|		then getNeighborAt(dir).hasDoorAt(dir.oppositeDirection()) && new.hasDoor(dir) == true && getNeighborAt(dir).isOpen(dir.oppositeDirection()) && this.isOpen(dir)
-	 * @post If the door is build (and as a consequence set open) the temperature of the newly formed group will be updated.
-	 * 		|for each square in this.calculateGroup():
-	 * 		|	square.getTemperature() == square.calculateUpdateTemperature()
+	 * @param dir
+	 * 		The direction to build the door in.
+	 * @effect A closed door is build
+	 * 		| buildDoorAt(dir, false);
 	 */
 	public void buildDoorAt(Direction dir) {
-		Obstacle door = new Door(true);
-		if (canHaveAsObstacleAt(dir, door) && this.getNeighborAt(dir) == null) {
-			this.setObstacleAt(dir, door);
-		}
+		buildDoorAt(dir, false);
+	}
+	
+	/**
+	 * Method to build doors at given direction.
+	 *
+	 * @param dir
+	 * 		The direction in which you want to add a wall.
+	 * @param isOpen
+	 * 		Whether the new door should be open.
+	 * @pre The given direction is effective
+	 * 		| direction != null
+	 * @post If the given direction is effective and this square has a neighbor at the given direction and the building of a door is possible in both squares, 
+	 * 		then a door will be set in both squares at the given direction (resp opposite direction).
+	 * 		The door has an open-state of isOpen. If the door is open, then temperature is updated.
+	 * 		| if getNeighbor(dir) != null
+	 * 		|		&& getNeighborAt(dir).canHaveAsObstacle(dir.oppositeDirection(), new Door())
+	 * 		|		&& this.canHaveAsObstacle(dir, new Door())) 
+	 * 		|	then (new getNeighborAt(dir)).hasDoorAt(dir.oppositeDirection())
+	 * 		|		&& new.hasDoorAt(dir)
+	 * 		|		&& (new getNeighborAt(dir)).((Door)getObstacleAt(dir.oppositeDirection())).isOpen() == isOpen
+	 * 		|		&& new.((Door)getObstacleAt(dir)).isOpen() == isOpen
+	 * 		|		if isOpen
+	 * 		|			then for each square in new.calculateGroup():
+	 * 		|				square.getTemperature() == square.calculateUpdateTemperature()
+	 * @note A door can only be build is you have a neighbor in the respective direction.
+	 */
+	public void buildDoorAt(Direction dir, boolean isOpen){
+		Door door = new Door(isOpen);
+
 		if(this.getNeighborAt(dir) != null){
 			if (canHaveAsObstacleAt(dir, door) && this.getNeighborAt(dir).canHaveAsObstacleAt(dir.oppositeDirection(), door)) {
 				this.setObstacleAt(dir, door);
 				this.getNeighborAt(dir).setObstacleAt(dir.oppositeDirection(), door);
 			}
+		}
+		if(isOpen){
+			updateTemperature();
 		}
 	}
 	
@@ -595,11 +637,11 @@ public class Square {
 	 * @param dir The direction in which you want to open the door.
 	 * @post If there is a door in that direction, the method opens the door.
 	 * 		The temperature will also be recalculated for the newly formed group
-	 * 		|if(this.hasDoor(dir))
+	 * 		|if this.hasDoor(dir)
 	 * 		|	then new.isOpen() == true
 	 * 		|		&& new.getTemperature() == this.calculateUpdateTemperature()
 	 * @return If there is no door in that direction, the method does nothing.
-	 * 		|if(!this.hasDoor(dir))
+	 * 		|if !this.hasDoor(dir)
 	 * 		|	then new.isOpen() == false
 	 */
 	public void setOpen(Direction dir){
@@ -628,7 +670,7 @@ public class Square {
 			this.obstaclesMap.put(dir, obstacle);
 		}
 		else{
-			this.destroyObstacle(dir);
+			this.destroyObstacleAt(dir);
 		}
 	}
 	
@@ -646,7 +688,7 @@ public class Square {
 	 * @post After the obstacle has been destroyed, the temperature will be set to the one of the new group that has been formed.
 	 * 		|new.getTemperature() == new.calculateUpdateTemperature()
 	 */
-	public void destroyObstacle(Direction dir){
+	public void destroyObstacleAt(Direction dir){
 		if(this.canHaveAsObstacleAt(dir, null)){
 			obstaclesMap.remove(dir);
 			if(this.getNeighborAt(dir) != null){
@@ -655,78 +697,19 @@ public class Square {
 			this.updateTemperature();
 		}
 	}
-	
-	/**
-	 * Method to destroy a wall between two squares.
-	 * 
-	 * @param dir The direction in which the wall must be destroyed seen from this square.
-	 * @effect The wall will be destroyed if there is one and it could be destroyed. Also the temperature will be updated.
-	 * 		|destroyObstacle(dir)
-	 */
-	//TODO not needed
-	public void destroyWallAt(Direction dir){
-		this.destroyObstacle(dir);
-	}
-	
-	/**
-	 * Method to destroy a door between two squares.
-	 * 
-	 * @param dir The direction in which the door must be destroyed seen from this square.
-	 * @effect The door will be destroyed if there is one and it could be destroyed. Also the temperature will be updated.
-	 * 		|destroyObstacle(dir)
-	 */
-	//TODO not needed
-	public void destroyDoorAt(Direction dir){
-		this.destroyObstacle(dir);
-	}
-
-	/**
-	 * When the obstacles aren't proper then this method will fix them. 
-	 * The obstacles will be set the same as those of the neighbor.
-	 * Also the moveability of an obstacle will be set the same.
-	 * 
-	 * @post The method will set walls in every direction where there is no neighbor.
-	 * 		|for each dir in Direction.values(): 
-	 * 		|	if(this.getNeighborAt(dir) == null) 
-	 * 		|		then new.hasWallAt(dir)
-	 * @post The method will set walls in every direction where the neighbor has walls.
-	 * 		|for each dir in Direction.values(): 
-	 * 		|	if(this.getNeighborAt(dir).hasWallAt(dir.oppositeDirection()))
-	 *		|		then new.hasWallAt(dir) == true
-	 * @post The method will set doors in every direction where the neighbor has doors and the doors will have the same moveability
-	 * 		|for each dir in Direction.values(): 
-	 * 		|	if(this.getNeighborAt(dir).hasDoorAt(dir.oppositeDirection()) 
-	 * 		|		then new.hasDoorAt(dir) == true && (new.canMove(dir) == new.getNeighborAt(dir).canMove(dir.oppositeDirection()))
-	 * @post The method will destroy doors and walls in every direction where the neighbor hasn't any obstacles.
-	 * 		|for each dir in Direction.values(): 
-	 * 		|	if(this.getNeighborAt(dir).getObstacleAt(dir.oppositeDirection() == null) 
-	 * 		|		then new.getObstacleAt(dir) == null
-	 */
-	public void fixObstacles() {
-		for (Direction dir : Direction.values()) {
-			if (this.getNeighborAt(dir) == null) {
-				this.setObstacleAt(dir, new Wall());
-			} else {
-				if (this.getNeighborAt(dir).getObstacleAt(dir.oppositeDirection()) == null) {
-					this.setObstacleAt(dir, null);
-				}
-				if (this.getNeighborAt(dir).hasWall(dir.oppositeDirection())) {
-					this.setObstacleAt(dir, new Wall());
-				}
-				if (this.getNeighborAt(dir).hasDoor(dir.oppositeDirection())) {
-					this.setObstacleAt(dir, new Door());
-					((Door)this.getObstacleAt(dir)).setOpen(((Door)this.getNeighborAt(dir).getObstacleAt(dir.oppositeDirection())).isOpen());
-				}
-			}
-		}
-	}
 
 	/**
 	 * Variable to store the obstacles of a square.
 	 */
 	private EnumMap<Direction, Obstacle> obstaclesMap;
 
-	/* Neighbors (Total) */
+	
+	
+	
+	
+	/***********************************************************
+	 * NEIGHBORS (total)
+	 ***********************************************************/
 
 	/**
 	 * Inspector to retrieve all the neighbors of a square.
@@ -797,9 +780,8 @@ public class Square {
 	 */
 	public boolean hasAsNeighbor(Square square) {
 		for (Square s : getNeighbors()) {
-			if (square == s) {
+			if (square == s)
 				return true;
-			}
 		}
 		return false;
 	}
@@ -821,22 +803,21 @@ public class Square {
 	* 
 	* @return True if for each neighbor of this square in a specific direction, that neighbor is legal and has
 	* 		also this square as its neighbor in the inverse of that direction.
-	* 		|result == (for each square in this.getObstacles():
-	* 		|	(canHaveAsNeighbor(square)) && (square.getNeighborAt(this.getDirectionOfNeighbor(square).oppositeDirection()) == this)
+	* 		|result ==
+	* 		|	( for each square in this.getObstacles():
+	* 		|		canHaveAsNeighbor(square)
+	* 		|		&& square.getNeighborAt(getDirectionOfNeighbor(square).oppositeDirection()) == this )
 	*/
 	public boolean hasProperNeighbors() {
 		for(Square square: this.getNeighbors()){
-			if(!this.canHaveAsNeighbor(square)){
+			if(!this.canHaveAsNeighbor(square))
 				return false;
-			}
-			if(square.getNeighborAt(this.getDirectionOfNeighbor(square).oppositeDirection()) != this){
+			if(square.getNeighborAt(getDirectionOfNeighbor(square).oppositeDirection()) != this)
 				return false;
-			}
 		}
 		return true;
 	}
 
-	//TODO
 	/**
 	* Check whether the given square is valid as a neighbor for this square.
 	* 
@@ -845,26 +826,18 @@ public class Square {
 	* 		|if(isTerminated())
 	* 		|	then ( result == ( square == null ) )
 	* @return Else if the given square is not null, true if the given square is not terminated.
-	*		|if(!isTerminated() && square != null ))
+	*		| else if(!isTerminated() && square != null ))
 	*		|	then ( result == !square.isTerminated() )
 	* @return Else always true
-	* 		|(!isTerminated() && square == null ) 
-	* 		|	then ( result == true )
+	* 		| else result == true
 	* @note If a neighbor is accepted by this method, it is automatically accepted in all directions.
 	* 		Method 'canHaveAsNeighborAt(Direction dir, Square square)' is not needed.
 	*/
-	public boolean canHaveAsNeighborOld(Square square) {
-		if (isTerminated) {
-			return square == null;
-		} else {
-			if (square != null)
-				return !square.isTerminated();
-			return true;
-		}
-	}
-	
 	public boolean canHaveAsNeighbor(Square square) {
-		// Old implementation didnt seem to work.
+		if (isTerminated)
+			return square == null;
+		if (square != null)
+			return !square.isTerminated();
 		return true;
 	}
 
@@ -872,16 +845,17 @@ public class Square {
 	 * Method to set neighbor at given direction. This method doesn't take any temperature changes in account and only works unidirectionally.
 	 * Another thing to take into account is that the obstacle may be corrupt after setting new neighbors with this method.
 	 * 
-	 * @param dir The direction in which you want to add a neighbor.
-	 * @param square The square you want to add.
+	 * @param dir
+	 * 		The direction in which you want to add a neighbor.
+	 * @param square
+	 * 		The square you want to add.
 	 * @post If this square can have the other square as neighbor, then the square will be set connected at the given direction.
 	 * 		|if(canHaveAsNeighbor(square)
 	 * 		|	then new.getNeighborAt(dir) == square
 	 * @note This method is annotated raw because the temperature is not updated 
 	 * 		and the method only works in one direction of the association of neighbors. Also the obstacles between square will not be updated.
 	 */
-	@Model
-	@Raw
+	@Model @Raw
 	private void setNeighborAt(Direction dir, Square square){
 		if (canHaveAsNeighbor(square)) {
 			if (square == null) {
@@ -918,218 +892,55 @@ public class Square {
 	}
 	
 	/**
-	* Register the given square as a neighbor of this square in the given direction. 
-	* Also set the temperature according to the newly created group.
-	* The obstacles will be changed towards the obstacle of the neighbor.
-	* If this square already had a neighbor at that direction, the old neighbor will be removed.
-	* 
-	* @param square The square to register as a neighbor
-	* @param direction The direction of the given square relative to this square.
-	* @post If the new neighbor is a legal neighbor, this square has the given square as its neighbor in the given direction. 
-	* 		Also the given square has this square as its neighbor in the inverse of the given direction.
-	*	  	|if(this.canHaveAsNeighbor(square) && square.canHaveAsNeighbor(this))	
-	* 		|	then (new.getNeighborAt(direction) == square && (new.square).getNeighborAt(Direction.oppositeDirection()) == this )
-	* @post If this square already had a neighbor,
-	* 		then the old neighbor of this square will no longer have this square as its neighbor.
-	* 		At the place of its old connection with this square, the neighbor now has a wall.
-	* 		|(new.(old.getNeighborAt(direction)).getNeighborAt(direction.oppositeDirection()) == null
-	* 		|(new.(old.getNeighborAt(direction)).hasWallAt(direction.oppositeDirection()) == true
-	* @post If the new neighbor had a neighbor at the opposite direction,
-	* 		then the old neighbor of this neighbor will no longer have this neighbor as its neighbor.
-	* 		At the place of its old connection with this neighbor, the neighbor now has a wall.
-	* 		|(new.(old.(square.getNeighborAt(direction))).getNeighborAt(direction.oppositeDirection()) == null
-	* 		|(new.(old.(square.getNeighborAt(direction)).hasWallAt(direction.oppositeDirection()) == true
-	* @post The obstacles will be changed towards the obstacle of the neighbor.
-	* 		|new.hasSameAdjecantObstacleAt(direction) == true 
-	* 		|	&& old.(new.getNeighbourAt(direction).getObstacleAt(direction.oppositeDirection())) 
-	* 		|		== new.(new.getNeighbourAt(direction).getObstacleAt(direction.oppositeDirection()))
-	* @post The temperature will be set according to the newly created group.
-	* 		|for each square in this.computeGroup():
-	* 		|	new.square.getTemperature() == new.calculateUpdateTemperature()
-	*/
-	public void registerNeighborOld(Square square, Direction direction) {
-		if (this.canHaveAsNeighbor(square) && square.canHaveAsNeighbor(this)) {
-			if(this.getNeighborAt(direction) != null){
-				this.removeNeighbor(direction);
-			}
-			if(square.getNeighborAt(direction.oppositeDirection()) != null){
-				square.getNeighborAt(direction.oppositeDirection()).setNeighborAt(direction, null);
-				square.getNeighborAt(direction.oppositeDirection()).buildWallAt(direction);
-			}
-			this.setNeighborAt(direction, square);
-			square.setNeighborAt(direction, this);
-			this.fixObstacles();
-			this.updateTemperature();
-		}
-	}
-	
-	public void registerNeighbor(Square square, Direction direction) {
-		registerNeighbor(square, direction, false);
-	}
-	
-	/**
-	 * Method to copy all the neighbors from a given square to this one.
-	 * The obstacles will be changed too the ones of the new squares you copy.
-	 * The temperature must be changed according to the possible new group this square is now part of.
-	 * Because you copy, the old (here called other) square will now be isolated.
-	 * 
-	 * @param square The other square from which you want to copy.
-	 * @post If the given square is not null, all the neighbors will be copied to this one. The directions will be the same.
-	 * 		|if(square != null) 
-	 * 		|	then (for each direction in Direction.values(): 
-	 * 		|		new.getNeighborAt(direction) == other.getNeighborAt(direction)
-	 * @post If the given square is not null (so that the neighbors will be copied), 
-	 * 		then the old neighbors of this square will no longer have this square as their neighbor. 
-	 * 		At the place of their old connection they will now have a wall.
-	 * 		|for each direction in Direction.values:
-	 * 		|	(new.(old.getNeighborAt(direction)).getNeighborAt(direction.oppositeDirection()) == null
-	 * 		|	(new.(old.getNeighborAt(direction)).hasWallAt(direction.oppositeDirection()) == true	
-	 * @post The other square will now be isolated.
-	 * 		|(new.other).getNbOfNeighbors() == 0
-	 * 		|for each direction in Direction.values():
-	 * 		|	(new.other).hasWallAt(direction) == true
-	 * @post The obstacles will be changed too the ones of the new neighbors.
-	 * 		|for each direction in Direction.values():
-	 * 		|	new.hasSameAdjecantObstacleAt(direction) == true
-	 * 		|	&& old.(new.getNeighbourAt(direction).getObstacleAt(direction.oppositeDirection())) 
-	 * 		|		== new.(new.getNeighbourAt(direction).getObstacleAt(direction.oppositeDirection())) 
-	 * @post The temperature will be changed to the new group temperature.
-	 * 		|for each square in calculateGroup():
-	 * 		|	square.getTemperature() == calculateUpdateTemperature()
-	 */
-	//TODO not needed
-	public void copyNeighbors(Square square) {
-		if(square != null){
-			for(Direction dir: Direction.values()){
-				this.removeNeighbor(dir);
-				this.setNeighborAt(dir, square.getNeighborAt(dir));
-				square.setNeighborAt(dir, null);
-				square.buildWallAt(dir);
-			}
-			this.fixObstacles();
-			this.updateTemperature();
-		}
-	}
-
-	/**
-	 * Variable to store the neighbors of a square.
-	 */
-	private EnumMap<Direction, Square> neighborsMap;
-
-	/* MERGING SQUARES (Defensive) */
-
-	/**
-	 * Method that checks if you can move in a certain direction.
-	 * 
-	 * @param dir The direction to move in.
-	 * @return Returns true if there is neighbor in that direction and there is no wall between them or the door is open.
-	 * 		With other words, you can move in that direction.
-	 * 		|result == ((this.getNeighborAt(dir) != null) && (!this.hasWallAt(dir)) && (if(this.hasDoorAt(dir)) then getObstacleAt(dir).isOpen())
-	 */
-	public boolean canMove(Direction dir) {
-		if (this.getNeighborAt(dir) != null) {
-			if (this.hasWall(dir)) {
-				return false;
-			}
-			if (this.hasDoor(dir)) {
-				return ((Door) this.getObstacleAt(dir)).isOpen();
-			} else {
-				return true;
-			}
-		} else {
-			return false;
-		}
-	}
-
-	//TODO
-	/**
-	 * Method to compute a group of moveable squares.
-	 * 
-	 * @return Creates a group of moveable squares. The list will contain adjecant squares that are moveable.
-	 * 		|for each dir in Direction.values():
-	 * 		|	if(this.canMove(dir)
-	 * 		|		then if(!result.contains(this.getNeighborAt(dir)))
-	 * 		|			then result.add(this.getNeighborAt(dir)) && result.addAll(this.getNeighborAt(dir).computeGroup())
-	 * @note This method is annotated raw because the method can be used even when the temperature isn't updated yet.
-	 */
-	@Raw
-	public ArrayList<Square> computeGroupOld() {
-		// invar: The ArrayList contains squares that are connected through moveable obstacles (null and door).
-		// 		|for each square1 and square2 in group:
-		//		|	if(square1.getNeighborAt(dir) == square2)
-		//		|		then square1.canMove(dir)
-		// invar: There are no duplicates in the list.
-		//		|for each square in group:
-		//		|	group.remove(square).contains(square) == false
-		ArrayList<Square> group = new ArrayList<Square>();
-		for (Direction dir : Direction.values()) {
-			if (this.canMove(dir)) {
-				if(!group.contains(this.getNeighborAt(dir))){
-					group.add(this.getNeighborAt(dir));
-					group.addAll(this.getNeighborAt(dir).computeGroup());
-				}
-			}
-		}
-		return group;
-	}
-
-	/**
-	 * Method to merge a group of squares with another group of squares.
-	 * 
-	 * @param dir The direction of the other group.
-	 * @post The temperature of each square in this and the other group will be the average of the squares in the two groups, taken in account the size of the two groups. 
-	 * 		We can also see this now as one group.
-	 * 		|for each square in calculateGroup():
-	 * 		|	square.getTemperature() == square.calculateUpdateTemperature()
-	 * @throws IllegalArgumentException [MUST] The direction is not valid if there doesn't exist a neighbor at the given direction.
-	 * 		|getNeighborAt(dir) == null
-	 * @note This method is annotated raw because the method can be used when the temperature isn't updated yet.
-	 */
-	@Raw
-	public void mergeWith(Direction dir) {
-		if (this.getNeighborAt(dir) != null) {
-			this.updateTemperature();
-		}
-		else{
-			throw new IllegalArgumentException("There is no neighbor at the given direction!");
-		}
-	}
-	
-	
-	// TODO methodes door Edward
-	/**
-	 * Register a neighbor for this square at the given direciton, and remoove the obstacle between this
+	 * Register a neighbor for this square at the given direction, and remoove the obstacle between this
 	 * square and its new square if destroyObstacle is true. 
-	 * TODO doc
+	 * 
 	 * @param square
 	 * 		The square to add as neighbor
 	 * @param direction
 	 * 		The direction in which to add the neighbor
 	 * @param destroyObstacle
 	 * 		Whether the obstacles between this and the new neighbor should be removed.
-	 * @post If the given square and direcition are effective, then this square has the given square as
-	 * 		its neighbor in the given direction
+	 * @post If the given square and direction are effective, and this square already has a neighbor
+	 * 		in the given direction, then that neighbor now has no neighbor in the opposite of the
+	 * 		given direction. It also has a wall in that direction now.
+	 * 		| if square != null && direction != null && this.hasNeighborAt(direction)
+	 * 		|	then !(new this.getNeighborAt(direction)).hasNeighborAt(direction.oppositeDirection())
+	 * 		|		&& (new this.getNeighborAt(direction)).hasWall(direction.oppositeDirection())
+	 * @post If the given square and direction are effective, and the given square already had a neighbor
+	 * 		in the inverse of the given direction, then that neighbor now has no neighbor in the given
+	 * 		direction anymore. It also has a wall in that direction now.
+	 *		| if square != null && direction != null && (this square).hasNeighborAt(direction.oppositeDirection())
+	 * 		|	then !(new (this square).hasNeighborAt(direction.oppositeDirection())).hasNeighborAt(direction)
+	 * 		|		&& (new (this square).hasNeighborAt(direction.oppositeDirection())).hasWall(direction)
+	 * @post If the given square and direction are effective, then this square has the given square as
+	 * 		its neighbor in the given direction. Also the given square has this square as its neighbor in the
+	 * 		opposite direction.
 	 * 		| if square != null && direction != null
 	 * 		|	then new.hasAsNeighborAt(square, direction)
-	 * TODO do the same test for other conditions
-	 * @post If this square had a neighbor in the given direction, it is now removed
-	 * 		| if this.getNeighborAt(direction) != null
-	 * 		|	then new.getNeighborAt(direction) != this.getNeighborAt(direction)
-	 * @post If destroyObstacle is true and this square and the new neighbor can have an opening between them
-	 * 		then this square and the given square wont have an obstacle between them.
-	 * 		| if destroyObstacle TODO extra condition.
-	 * 		|	then (new square).hasObstacleAt(direction.oppositeDirection()) == false
-	 * 		|		&& new.hasObstacleAt(direction) == false
-	 * @post Else if this square had a neighbor in the given direction, and there was a door between them
-	 * 		or the given square had a neighbor in the opposite direction, and there was a door between them
-	 * 		then this square and the given square will now have a door between them.		
-	 * @post Else if this square had a neighbor in the given direction, and there was a wall between them
-	 * 		or the given square had a neighbor in the opposite direction, and there was a wall between them
-	 * 		then this square and the given square will now have a wall between them.
-	 * @post Else if this square had a neighbor in the given direction, and there was an opening between them
-	 * 		and the given square had a neighbor in the opposite direction, and there was an opening between them
-	 * 		then this square and the given square will now have an opening between them.
-	 * @note The given square if not assumed to be isolated: it may have openings, doors and neighbors.
+	 * 		|		&& (new square).hasAsNeighborAt(this, direction.oppositeDirection())
+	 * @effect If destroyObstacle is true and this square and the new neighbor can have an opening between them,
+	 * 		then this square and the given square will have an opening between them.
+	 * 		| if destroyObstacle
+	 * 		|	&& this.canHaveAsObstacleAt(direction, null)
+	 * 		|	&& (this square).canHaveAsObstacleAt(direction.oppositeDirection(), null)
+	 * 		|	then destroyObstacleAt(direction)
+	 *		Else the following happens:
+	 * 		If this or the given square currently has a door in the given direction (resp opposite direction)
+	 * 		then a door is build between the new neighbors with the same oppening state.
+	 * 		| else if this.hasDoor(direction) || square.hasDoor(direction.oppositeDirection())
+	 * 		|			then buildDoorAt(direction)
+	 * 		Else if this or the given square has a wall in the given direction (resp opposite direction)
+	 * 		then a wall is build between the new neighbors
+	 * 		| 		else if this.hasWall(direction) || square.hasWall(direction.oppositeDirection())
+	 * 		|			then buildWallAt(direction)
+	 * 		Else if this or the given square has an opening in the given direction (resp opposite direction)
+	 * 		then an opening is created between the new neighbors
+	 * 		|		else if !this.hasObstacleAt(direction) || !square.hasObstacleAt(direction.oppositeDirection())
+	 * 		|			then destroyObstacleAt(direction)
+	 * @note This square might already have a neighbor in the given direction, or the given square might already
+	 * 		have a niehgbor in the opposite direction. These 'external nieghbor' are also handled bij this method
+	 * 		(they don't have that neighbor anymore, and a wall is build)
 	 */
 	public void registerNeighbor(Square square, Direction direction, boolean destroyObstacle){
 		if(square == null || direction == null)
@@ -1137,12 +948,11 @@ public class Square {
 		
 		// Check if a neihgbor already exists. If so, break the old association (obstacles are kept)
 		// both this square and the given square can already have a neighbor...
-		Square oldOne = neighborsMap.get(direction);
+		Square oldOne = getNeighborAt(direction);
 		if(oldOne != null){
 			// NOTE: set neighbor does not break invariant
 			// 1. because there is not dungeon to check
 			// 2. because this method is called after the squares are already neighbors (see addAsSquareAt)
-			//setNeighborAt(direction, null); TODO
 			oldOne.setNeighborAt(direction.oppositeDirection(), null);
 			oldOne.buildWallAt(direction.oppositeDirection()); // no invariants are broken since a wall must be placed in dirctions there is no neighbor
 		}
@@ -1182,39 +992,101 @@ public class Square {
 		}
 	}
 	
-	public void destroyObstacleAt(Direction d){
-		this.destroyObstacle(d);
+	/**
+	 * Convenience method for registerNeighbor(square, direction, destroyObstacle)
+	 * 
+	 * @param square
+	 * 		The square to add as a neighbor
+	 * @param direction
+	 * 		The direction to add the given square in as neighbor
+	 * @effect The given square is registered as neighbor at the given position, and the wall
+	 * 		between the new neighbors is not destroyed
+	 * 		| registerNeighbor(square, direction, false)
+	 * 		
+	 */
+	public void registerNeighbor(Square square, Direction direction) {
+		registerNeighbor(square, direction, false);
+	}
 
-	}
-	
-	public void buildDoorAt(Direction dir, boolean isOpen){
-		Door door = new Door(true);
-		// If you have no neighbor, then the door is not build... TODO
-		if(this.getNeighborAt(dir) != null){
-			if (canHaveAsObstacleAt(dir, door) && this.getNeighborAt(dir).canHaveAsObstacleAt(dir.oppositeDirection(), door)) {
-				this.setObstacleAt(dir, door);
-				this.getNeighborAt(dir).setObstacleAt(dir.oppositeDirection(), door);
-			}
-		}
-		
-		if(isOpen){
-			door.setOpen(true);
-			updateTemperature();
-		}
-	}
-	
+	/**
+	 * Check whether this square can collapse.
+	 * 
+	 * @return True is this square has a rock above it.
+	 * 		| result ==  ( getNeighborAt(Direction.UP) != null
+	 * 		|			&&  getNeighborAt(Direction.UP) instanceof Rock )
+	 */
 	public boolean canCollapse(){
-		//TODO inctanceof....
 		Square upperNeighbor = getNeighborAt(Direction.UP);
-		if(upperNeighbor!= null && upperNeighbor instanceof Rock )
+		if(upperNeighbor!= null && upperNeighbor.canMakeCollapse() )
 			return true;
 		return false;
-		
 	}
 	
+	/**
+	 * Check whether this square can make a square bolow it collapse.
+	 * 
+	 * @return Always true
+	 */
+	public boolean canMakeCollapse(){
+		return false;
+	}
+	
+	/**
+	 * Variable to store the neighbors of a square.
+	 */
+	private EnumMap<Direction, Square> neighborsMap;
+
+	
+	
+	
+	
+	/***********************************************************
+	 * MERGING SQUARES (Defensive)
+	 ***********************************************************/
+
+	/**
+	 * Method that checks if you can move in a certain direction.
+	 * 
+	 * @param dir The direction to move in.
+	 * @return Returns true if there is neighbor in that direction and there is no wall between them or the door is open.
+	 * 		With other words, you can move in that direction.
+	 * 		|result == ((this.getNeighborAt(dir) != null) && (!this.hasWallAt(dir)) && (if(this.hasDoorAt(dir)) then getObstacleAt(dir).isOpen())
+	 */
+	public boolean canMove(Direction dir) {
+		if (this.getNeighborAt(dir) != null) {
+			if (this.hasWall(dir)) {
+				return false;
+			}
+			if (this.hasDoor(dir)) {
+				return ((Door) this.getObstacleAt(dir)).isOpen();
+			} else {
+				return true;
+			}
+		} else {
+			return false;
+		}
+	}
+	
+	/**
+	 * Compute the group to which this square belongs (A 'group' is defined as a set of squares
+	 * between which one can move)
+	 * 
+	 * @return The group to which this square belongs.
+	 * 		| for each square in result:
+	 * 		|	for some otherSquare in result:
+	 * 		|		square.hasAsNeighbor(otherSquare)
+	 * 		|		&& square.canMove(getDirectionOfNeighbor(otherSquare))
+	 */
 	@Raw
-	public ArrayList<Square> computeGroup() {
-		ArrayList<Square> group = new ArrayList<Square>();
+	public Collection<Square> computeGroup() {
+		// invar: The set contains squares that are connected through moveable obstacles (null and door).
+		// 		|for each square1 and square2 in group:
+		//		|	if(square1.getNeighborAt(dir) == square2)
+		//		|		then square1.canMove(dir)
+		// invar: There are no duplicates in the list.
+		//		|for each square in group:
+		//		|	group.remove(square).contains(square) == false
+		Set<Square> group = new HashSet<Square>();
 		group.add(this);
 		
 		ArrayList<Square> mn = movableNeighbors();
@@ -1225,16 +1097,25 @@ public class Square {
 		while(newlyAdded.size() != 0){
 			Square n = newlyAdded.pop();
 			for(Square s : n.movableNeighbors()){
-				if(!group.contains(s)){
-					group.add(s);
+				boolean added = group.add(s);
+				if(added)
 					newlyAdded.push(s);
-				}
 			}
 		}
 
 		return group;
 	}
 	
+	/**
+	 * Retrieve all the squares to which one can move from this squre, given the current obstacle and
+	 * neighbor configuration
+	 * 
+	 * @return All the squares to which one can move from this squre.
+	 * 		| for direction in Direction.values():
+	 *		|	if canMove(direction)
+	 *		|		then result.add(getNeighborAt(direction))
+	 */
+	@Model @Raw
 	private ArrayList<Square> movableNeighbors(){
 		ArrayList<Square> g = new ArrayList<Square>();
 		for (Direction d : Direction.values()) {
@@ -1244,7 +1125,27 @@ public class Square {
 		}
 		return g;
 	}
-	
-	
 
+	/**
+	 * Method to merge a group of squares with another group of squares.
+	 * 
+	 * @param dir The direction of the other group.
+	 * @post The temperature of each square in this and the other group will be the average of the squares in the two groups, taken in account the size of the two groups. 
+	 * 		We can also see this now as one group.
+	 * 		|for each square in calculateGroup():
+	 * 		|	square.getTemperature() == square.calculateUpdateTemperature()
+	 * @throws IllegalArgumentException [MUST] The direction is not valid if there doesn't exist a neighbor at the given direction.
+	 * 		|getNeighborAt(dir) == null
+	 * @note This method is annotated raw because the method can be used when the temperature isn't updated yet.
+	 */
+	@Raw
+	public void mergeWith(Direction dir) {
+		if (this.getNeighborAt(dir) != null) {
+			this.updateTemperature();
+		}
+		else{
+			throw new IllegalArgumentException("There is no neighbor at the given direction!");
+		}
+	}
+	
 }

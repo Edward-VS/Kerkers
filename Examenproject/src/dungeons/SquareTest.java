@@ -167,10 +167,10 @@ public class SquareTest {
 	 */
 	@Test
 	public void testGetObstacleAt() {
-		//TODO zeker geen instanceof in in een test gebruiker...
+		//TODO zeker geen instanceof in in een test gebruiken...
 		assertTrue(testSquare4.getObstacleAt(Direction.NORTH) instanceof Door);
 		assertTrue(testSquare4.getObstacleAt(Direction.SOUTH) instanceof Wall);
-		testSquare4.destroyWallAt(Direction.SOUTH);
+		testSquare4.destroyObstacleAt(Direction.SOUTH);
 		assertTrue(testSquare4.getObstacleAt(Direction.SOUTH) ==  null);
 		testSquare4.buildWallAt(Direction.SOUTH);
 	}
@@ -246,19 +246,22 @@ public class SquareTest {
 		fail("The exception must be thrown");
 	}
 
+	
+	// TODO replace with test that tests destruction of obstacle (not of wall resp door)
 	/**
 	 * Test method for destroyWallAt().
 	 */
 	@Test
 	public void testDestroyWallAt() {
-		testSquare4.destroyWallAt(Direction.EAST);
+		testSquare4.destroyObstacleAt(Direction.EAST);
 		assertFalse(testSquare4.hasWall(Direction.EAST));
 		assertFalse(testSquare3.hasWall(Direction.EAST.oppositeDirection()));
 	}
+	// TODO  total implementation -> exception should never be thrown
 	@Test (expected = IllegalArgumentException.class)
 	public void testDestroyWallAtException() {
-		testSquare1.destroyWallAt(Direction.UP);
-		testSquare1.destroyWallAt(Direction.UP);
+		testSquare1.destroyObstacleAt(Direction.UP);
+		testSquare1.destroyObstacleAt(Direction.UP);
 		fail("The exception must be thrown");
 	}
 
@@ -282,10 +285,11 @@ public class SquareTest {
 		assertTrue(testSquare4.canHaveAsNeighbor(testSquare1));
 	}
 	
+	//TODO removed test, because method does not exist anymore
 	/**
 	 * Test method for copyNeighbors().
 	 */
-	@Test
+	/*@Test
 	public void testCopyNeighbors() {
 		Square testSquareCopy = new Square();
 		testSquareCopy.copyNeighbors(testSquare4);
@@ -295,7 +299,7 @@ public class SquareTest {
 		assertEquals(testSquareCopy.getNeighborAt(Direction.EAST), testSquare4.getNeighborAt(Direction.EAST));
 		assertEquals(testSquareCopy.getNeighborAt(Direction.UP), testSquare4.getNeighborAt(Direction.UP));
 		assertEquals(testSquareCopy.getNeighborAt(Direction.DOWN), testSquare4.getNeighborAt(Direction.DOWN));
-	}
+	}*/
 	
 	/**
 	 * Test method for removeNeighbor().
