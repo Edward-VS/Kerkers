@@ -18,17 +18,17 @@ import dungeons.obstacle.*;
  * TODO algemeen:
  * 	-pre concdities op argumenten van methoden, of extra condities verwerken in
  * 		de documentatie van methoden -> implementatie moeten rekening kunnen houden met null waarden.
- *  - verwissel argument volgorde van methoden zoals canHaveAsObstacleAt (logischer)
  *  - netter zijn in formele logica: bv. veelal zijn haakjes net achter 'if' overbodig
  *  - kweet nie zeker of calculateUpdateTemperature zal werken in de tests
  *  - Eventuele oplossing voor alle liskov problemen: twee aparte enumMappen, één voor door en één voor wall.
- *  - klasse documentatie
  *  
- * A class for the creation of objects of Squares.
+ * A class for the creation of objects of Squares. A square has 6 directions. 
+ * In each direction there can be an obstacle.
+ * There is also a specific temperature for the square.
  * 
  * @author Christof Vermeersch & Edward Van Sieleghem
  * @invar The square can maximum have 6 boundaries.
- * 		|obstacleMap.size() <= 6
+ * 		|getNbOfObstacles() <= 6
  * @invar The obstacles must be valid.
  * 		|hasProperObstacles() ==  true
  * @invar The neighbors must be valid.
@@ -94,7 +94,7 @@ public class Square {
 
 	/**
 	 * Terminator, to tear down bidirectional association between neighbors.
-	 * !NOTE! This terminator lacks in the fact that it is unable the check whether the square
+	 * !NOTE! This terminator lacks in the fact that it is unable to check whether the square
 	 * is still present in any Dungeon. If it is still present, but in a terminated state, then
 	 * invariants of Dungeon are broken!
 	 * 
@@ -188,6 +188,8 @@ public class Square {
 
 	/**
 	 * Checker that tells if the given temperature is valid as start temperature for an isolated square.
+	 * Basically it will check if it is between the boundary conditions.
+	 * 
 	 * @param temp The temperature to test.
 	 * @return Returns true if the temperature is between the two boundary temperatures.
 	 * 		|return == (temp < this.getMaxTemperature() && temp < this.getMinTemperature())
@@ -198,6 +200,7 @@ public class Square {
 	
 	/**
 	 * Checker that tells if the current temperature is valid.
+	 * 
 	 * @return Returns true if the temperature is between the two boundary temperatures and the temperature
 	 * 		is the same as in the other squares of the group containing this square.
 	 * 		|return == (isValidTemperature(this.getTemperature()) 
@@ -260,10 +263,13 @@ public class Square {
 	 * 		| new.getTemperature() == temp
 	 * @throws IllegalArgumentException [MUST] The given temperature is not valid.
 	 * 		| !isValidTemperature(temp)
+	 * @note This method is annotated raw because it is possible that it is used to set temperature that violates the invariants (especially in groups of squares).
 	 */
+	@Raw
 	private void setTemperature(int temp) throws IllegalArgumentException {
-		if(!Square.isValidTemperature(temp))
+		if(!Square.isValidTemperature(temp)){
 			throw new IllegalArgumentException("The temperature is not valid!");
+		}
 		this.temperature = temp;
 	}
 
@@ -273,8 +279,13 @@ public class Square {
 	 * @param temp The specified maximum temperature.
 	 * @post The current maximum temperature is set to the given one.
 	 * 		|new.getMaxTemperature() == temp
+	 * @throws IllegalArgumentException [MUST] The given temperature is lower than the default temperature and must be higher.
+	 * 		|temp < Square.getDefaultTemperature()
 	 */
 	public static void setMaxTemperature(int temp) {
+		if(temp<Square.getDefaultTemperature()){
+			throw new IllegalArgumentException("The maximum temperature must be higher than the default one!");
+		}
 		Square.max_temperature = temp;
 	}
 
@@ -284,8 +295,13 @@ public class Square {
 	 * @param temp The specified minimum temperature.
 	 * @post The current minimum temperature is set to the given one.
 	 * 		|new.getMinTemperature() == temp
+	 * @throws IllegalArgumentException [MUST] The given temperature is higher than the default temperature and must be lower.
+	 * 		|temp > Square.getDefaultTemperature()
 	 */
 	public static void setMinTemperature(int temp) {
+		if(temp>Square.getDefaultTemperature()){
+			throw new IllegalArgumentException("The maximum temperature must be lower than the default one!");
+		}
 		Square.min_temperature = temp;
 	}
 
@@ -295,8 +311,13 @@ public class Square {
 	 * @param unit The new unit for heat damage.
 	 * @post The unit will be update too the new one.
 	 * 		|new.getUnitHeatDamage() == unit
+	 * @throws IllegalArgumentException [MUST] The unit is smaller than or equal to zero.
+	 * 		|unit<=0
 	 */
 	public static void setUnitHeatDamage(int unit) {
+		if(unit<=0){
+			throw new IllegalArgumentException("The unit must be larger than zero!");
+		}
 		Square.unitHeatDamage = unit;
 	}
 
@@ -306,8 +327,13 @@ public class Square {
 	 * @param step The new step for heat damage.
 	 * @post The step will be update too the new one.
 	 * 		|new.getHeatDamageStep() == step
+	 * @throws IllegalArgumentException [MUST] The step is smaller than or equal to zero.
+	 * 		|step<=0
 	 */
 	public static void setHeatDamageStep(int step) {
+		if(step<=0){
+			throw new IllegalArgumentException("The step must be larger than zero!");
+		}
 		Square.heatDamageStep = step;
 	}
 
@@ -317,8 +343,13 @@ public class Square {
 	 * @param limit The new limit for heat damage.
 	 * @post The limit will be update too the new one.
 	 * 		|new.getHeatDamageAbove() == limit
+	 * @throws IllegalArgumentException [MUST] The limit for heat damage is lower than the limit for cold damage.
+	 * 		|limit<-5
 	 */
 	public static void setHeatDamageAbove(int limit) {
+		if(limit<-5){
+			throw new IllegalArgumentException("Limit must be larger than -5!");
+		}
 		Square.heatDamageAbove = limit;
 	}
 
@@ -524,7 +555,8 @@ public class Square {
 		return true;
 	}
 
-	//TODO
+	//TODO Methode uitwerken om canHaveAsObstacleAt te laten werken
+	//TODO Tot hier 
 	/**
 	 * Checker that checks if given obstacle is possible in certain direction.
 	 * 
