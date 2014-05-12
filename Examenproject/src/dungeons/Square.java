@@ -15,13 +15,6 @@ import dungeons.util.*;
 import dungeons.obstacle.*;
 
 /**
- * TODO algemeen:
- * 	-pre concdities op argumenten van methoden, of extra condities verwerken in
- * 		de documentatie van methoden -> implementatie moeten rekening kunnen houden met null waarden.
- *  - netter zijn in formele logica: bv. veelal zijn haakjes net achter 'if' overbodig
- *  - kweet nie zeker of calculateUpdateTemperature zal werken in de tests
- *  - Eventuele oplossing voor alle liskov problemen: twee aparte enumMappen, één voor door en één voor wall.
- *  
  * A class for the creation of objects of Squares. A square has 6 directions. 
  * In each direction there can be an obstacle.
  * There is also a specific temperature for the square.
@@ -300,7 +293,7 @@ public class Square {
 	 */
 	public static void setMinTemperature(int temp) {
 		if(temp>Square.getDefaultTemperature()){
-			throw new IllegalArgumentException("The maximum temperature must be lower than the default one!");
+			throw new IllegalArgumentException("The minimum temperature must be lower than the default one!");
 		}
 		Square.min_temperature = temp;
 	}
@@ -444,6 +437,16 @@ public class Square {
 	}
 
 	/**
+	 * Inspector to tell if the square is always surrounded by walls or not.
+	 * This is a property of a Rock.
+	 */
+	@Basic
+	@Immutable
+	public boolean notAlwaysSurroundedByWalls(){
+		return this.NOTALWAYSSURROUNDEDBYWALLS;
+	}
+	
+	/**
 	 * Inspector to check if a square has a door in a certain direction.
 	 * 
 	 * @param dir The direction you want to check.
@@ -555,8 +558,6 @@ public class Square {
 		return true;
 	}
 
-	//TODO Methode uitwerken om canHaveAsObstacleAt te laten werken
-	//TODO Tot hier 
 	/**
 	 * Checker that checks if given obstacle is possible in certain direction.
 	 * 
@@ -565,25 +566,12 @@ public class Square {
 	 * @return The method will return the return of canBeAnObstacleAt of the specific obstacle.
 	 * 		|return == obstacle.canBeAnObstacleAt(this, dir)
 	 */
-	public boolean canHaveAsObstacleAtOld(Direction dir, Obstacle obstacle) {
-		//werkt niet
-		// Voor gewone square: elk obstakel mag (inclusief null), behalve als je geen neighbor hebt in die richting. Dan mag enkel een door
-		// Voor rock: enkel walls mogen 
-		// In teminated staat mogen ook enkel walls
-		return obstacle.canBeAnObstacleAt(this, dir);
-	}
-
 	public boolean canHaveAsObstacleAt(Direction dir, Obstacle obstacle) {
-		if (obstacle instanceof Wall) {
-			return true;
-		}
-		if (obstacle instanceof Door) {
+		if(obstacle == null){
 			return this.getNeighborAt(dir) != null;
 		}
-		if (obstacle == null) {
-			return this.getNeighborAt(dir) != null;
-		} else {
-			return false;
+		else{
+			return obstacle.canBeAnObstacleAt(this, dir);
 		}
 	}
 	
@@ -734,6 +722,13 @@ public class Square {
 	 * Variable to store the obstacles of a square.
 	 */
 	private EnumMap<Direction, Obstacle> obstaclesMap;
+	
+	/**
+	 * Variable to store if this square must be surrounded by wall at all time or not.
+	 * This is a property of a rock.
+	 */
+	private final boolean NOTALWAYSSURROUNDEDBYWALLS = false;
+	
 
 	
 	
@@ -924,7 +919,7 @@ public class Square {
 	}
 	
 	/**
-	 * Register a neighbor for this square at the given direction, and remoove the obstacle between this
+	 * Register a neighbor for this square at the given direction, and remove the obstacle between this
 	 * square and its new square if destroyObstacle is true. 
 	 * 
 	 * @param square
@@ -935,16 +930,16 @@ public class Square {
 	 * 		Whether the obstacles between this and the new neighbor should be removed.
 	 * @post If the given square and direction are effective, and this square already has a neighbor
 	 * 		in the given direction, then that neighbor now has no neighbor in the opposite of the
-	 * 		given direction. It also has a wall in that direction now.
-	 * 		| if square != null && direction != null && this.hasNeighborAt(direction)
-	 * 		|	then !(new this.getNeighborAt(direction)).hasNeighborAt(direction.oppositeDirection())
-	 * 		|		&& (new this.getNeighborAt(direction)).hasWall(direction.oppositeDirection())
+	 * 		given direction. It also has a wall in that opposite direction now.
+	 * 		| if (square != null && direction != null && this.hasNeighborAt(direction))
+	 * 		|	then !new.(old.getNeighborAt(direction)).hasNeighborAt(direction.oppositeDirection())
+	 * 		|		&& new.(old.getNeighborAt(direction)).hasWall(direction.oppositeDirection())
 	 * @post If the given square and direction are effective, and the given square already had a neighbor
 	 * 		in the inverse of the given direction, then that neighbor now has no neighbor in the given
 	 * 		direction anymore. It also has a wall in that direction now.
-	 *		| if square != null && direction != null && (this square).hasNeighborAt(direction.oppositeDirection())
-	 * 		|	then !(new (this square).hasNeighborAt(direction.oppositeDirection())).hasNeighborAt(direction)
-	 * 		|		&& (new (this square).hasNeighborAt(direction.oppositeDirection())).hasWall(direction)
+	 *		| if (square != null && direction != null && (this square).hasNeighborAt(direction.oppositeDirection()))
+	 * 		|	then !new.(old.square).hasNeighborAt(direction.oppositeDirection())).hasNeighborAt(direction)
+	 * 		|		&& new.(old.square).hasNeighborAt(direction.oppositeDirection())).hasWall(direction)
 	 * @post If the given square and direction are effective, then this square has the given square as
 	 * 		its neighbor in the given direction. Also the given square has this square as its neighbor in the
 	 * 		opposite direction.
@@ -953,15 +948,17 @@ public class Square {
 	 * 		|		&& (new square).hasAsNeighborAt(this, direction.oppositeDirection())
 	 * @effect If destroyObstacle is true and this square and the new neighbor can have an opening between them,
 	 * 		then this square and the given square will have an opening between them.
-	 * 		| if destroyObstacle
+	 * 		| if(destroyObstacle == true
 	 * 		|	&& this.canHaveAsObstacleAt(direction, null)
-	 * 		|	&& (this square).canHaveAsObstacleAt(direction.oppositeDirection(), null)
+	 * 		|	&& (this square).canHaveAsObstacleAt(direction.oppositeDirection(), null))
 	 * 		|	then destroyObstacleAt(direction)
 	 *		Else the following happens:
 	 * 		If this or the given square currently has a door in the given direction (resp opposite direction)
 	 * 		then a door is build between the new neighbors with the same oppening state.
-	 * 		| else if this.hasDoor(direction) || square.hasDoor(direction.oppositeDirection())
-	 * 		|			then buildDoorAt(direction)
+	 * 		| else if(this.hasDoor(direction) || square.hasDoor(direction.oppositeDirection()))
+	 * 		|			if(this.isOpen(direction) || square.isOpen(direction))
+	 * 		|				then buildDoorAt(direction, true)
+	 * 		|			else buildDoorAt(direction, false)
 	 * 		Else if this or the given square has a wall in the given direction (resp opposite direction)
 	 * 		then a wall is build between the new neighbors
 	 * 		| 		else if this.hasWall(direction) || square.hasWall(direction.oppositeDirection())
@@ -970,8 +967,9 @@ public class Square {
 	 * 		then an opening is created between the new neighbors
 	 * 		|		else if !this.hasObstacleAt(direction) || !square.hasObstacleAt(direction.oppositeDirection())
 	 * 		|			then destroyObstacleAt(direction)
+	 * // TODO Wat gebeurt er als beiden een obstacle hebben, maar een verschillend?
 	 * @note This square might already have a neighbor in the given direction, or the given square might already
-	 * 		have a niehgbor in the opposite direction. These 'external nieghbor' are also handled bij this method
+	 * 		have a neighbor in the opposite direction. These 'external neighbor' are also handled by this method
 	 * 		(they don't have that neighbor anymore, and a wall is build)
 	 */
 	public void registerNeighbor(Square square, Direction direction, boolean destroyObstacle){
@@ -1045,7 +1043,7 @@ public class Square {
 	 * 
 	 * @return True is this square has a rock above it.
 	 * 		| result ==  ( getNeighborAt(Direction.UP) != null
-	 * 		|			&&  getNeighborAt(Direction.UP) instanceof Rock )
+	 * 		|			&&  getNeighborAt(Direction.UP).canMakeCollapse() )
 	 */
 	public boolean canCollapse(){
 		Square upperNeighbor = getNeighborAt(Direction.UP);
@@ -1057,7 +1055,8 @@ public class Square {
 	/**
 	 * Check whether this square can make a square bolow it collapse.
 	 * 
-	 * @return Always true
+	 * @return Returns always false.
+	 * 		|result == false
 	 */
 	public boolean canMakeCollapse(){
 		return false;
@@ -1085,17 +1084,11 @@ public class Square {
 	 * 		|result == ((this.getNeighborAt(dir) != null) && (!this.hasWallAt(dir)) && (if(this.hasDoorAt(dir)) then getObstacleAt(dir).isOpen())
 	 */
 	public boolean canMove(Direction dir) {
-		if (this.getNeighborAt(dir) != null) {
-			if (this.hasWall(dir)) {
-				return false;
-			}
-			if (this.hasDoor(dir)) {
-				return ((Door) this.getObstacleAt(dir)).isOpen();
-			} else {
-				return true;
-			}
-		} else {
-			return false;
+		if(this.getObstacleAt(dir) != null){
+			return this.getObstacleAt(dir).canMoveThrough();
+		}
+		else{
+			return true;
 		}
 	}
 	

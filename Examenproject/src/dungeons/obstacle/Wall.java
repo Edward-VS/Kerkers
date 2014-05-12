@@ -23,10 +23,29 @@ public class Wall extends Obstacle {
 	 * 
 	 * @param square The square where the obstacle is needed.
 	 * @param dir Direction in which the obstacle is needed.
-	 * @return Returns always true.
-	 * 		|return == true
+	 * @return If the square is null then return false. Else return true.
+	 * 		|if(square == null)
+	 * 		|	then return == false
+	 * 		|else
+	 * 		|	return == true
 	 */
 	public boolean canBeAnObstacleAt(Square square, Direction dir) {
-		return square.hasNeighborAt(dir);
+		if(square == null){
+			return false;
+		}
+		else{
+			return true;
+		}
+	}
+	
+	/**
+	 * Method that indicates if the wall is moveable through.
+	 * 
+	 * @return Returns false for a wall.
+	 * 		|result == false
+	 */
+	@Override
+	public boolean canMoveThrough(){
+		return false;
 	}
 }

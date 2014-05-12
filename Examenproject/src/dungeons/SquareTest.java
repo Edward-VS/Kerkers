@@ -19,7 +19,7 @@ import dungeons.util.*;
  */
 public class SquareTest {
 
-	private Square testSquare1, testSquare2, testSquare3, testSquare4, testSquare5;
+	private Square testSquare1, testSquare2, testSquare3, testSquare4, testSquare5, testSquare6;
 	
 	@Before
 	public void setUp() {
@@ -27,12 +27,13 @@ public class SquareTest {
 		 * 4 different Squares, respectively without, too high, too low and good temperature as parameter.
 		 */
 		testSquare1 = new Square();
+		testSquare6 = new Square();
 		testSquare2 = new Square(55);
 		testSquare3 = new Square(-55);
 		testSquare4 = new Square(15);
 		testSquare5 = new Square(15);
-		testSquare4.buildDoorAt(Direction.NORTH);
 		testSquare4.registerNeighbor(testSquare3, Direction.EAST);
+		testSquare4.buildDoorAt(Direction.EAST, true);
 		testSquare5.buildDoorAt(Direction.NORTH);
 		testSquare5.registerNeighbor(testSquare1, Direction.EAST);
 	}
@@ -58,7 +59,6 @@ public class SquareTest {
 	@Test
 	public void testSquareInt() {
 		assertTrue(testSquare2.getTemperature() == 55);
-		assertTrue(testSquare3.getTemperature() == -55);
 	}
 
 	/**
@@ -89,28 +89,12 @@ public class SquareTest {
 		/*
 		 * ColdDamage
 		 */
-		assertEquals(testSquare3.calculateTemperatureDamage(), 5);
+		assertEquals(testSquare3.calculateTemperatureDamage(), 1);
 		/*
 		 * No damage
 		 */
-		assertEquals(testSquare4.calculateTemperatureDamage(), 0);
+		assertEquals(testSquare6.calculateTemperatureDamage(), 0);
 	}
-
-	/**
-	 * Test method for setTemperature(). Followed by an exception method.
-	 */
-	//TODO set temperature is private
-	/*@Test
-	public void testSetTemperature() {
-		testSquare4.setTemperature(30);
-		assertEquals(testSquare4.getTemperature(), 30);
-	}
-	@Test (expected = IllegalArgumentException.class)
-	public void testSetTemperatureFail() {
-		testSquare4.setTemperature(8000);
-		fail("The exception must be thrown");
-	}*/
-
 
 	/**
 	 * Test method for setMaxTemperature().
@@ -127,8 +111,8 @@ public class SquareTest {
 	 */
 	@Test
 	public void testSetMinTemperature() {
-		Square.setMinTemperature(1000);
-		assertTrue(Square.getMinTemperature() == 1000);
+		Square.setMinTemperature(-1000);
+		assertTrue(Square.getMinTemperature() == -1000);
 		Square.setMinTemperature(-2000);
 	}
 
@@ -168,8 +152,10 @@ public class SquareTest {
 	@Test
 	public void testGetObstacleAt() {
 		//TODO zeker geen instanceof in in een test gebruiken...
-		assertTrue(testSquare4.getObstacleAt(Direction.NORTH) instanceof Door);
-		assertTrue(testSquare4.getObstacleAt(Direction.SOUTH) instanceof Wall);
+		//TODO Christof: Is test van deze getter wel nodig?
+		assertTrue(testSquare4.getObstacleAt(Direction.EAST) instanceof Door);
+		assertTrue(testSquare4.getObstacleAt(Direction.NORTH) instanceof Wall);
+		testSquare4.registerNeighbor(testSquare1, Direction.SOUTH);
 		testSquare4.destroyObstacleAt(Direction.SOUTH);
 		assertTrue(testSquare4.getObstacleAt(Direction.SOUTH) ==  null);
 		testSquare4.buildWallAt(Direction.SOUTH);
@@ -189,7 +175,7 @@ public class SquareTest {
 	 */
 	@Test
 	public void testHasDoor() {
-		assertTrue(testSquare4.hasDoor(Direction.NORTH));
+		assertTrue(testSquare4.hasDoor(Direction.EAST));
 	}
 
 	/**
@@ -197,7 +183,7 @@ public class SquareTest {
 	 */
 	@Test
 	public void testHasWall() {
-		assertTrue(testSquare4.hasWall(Direction.EAST));
+		assertTrue(testSquare4.hasWall(Direction.NORTH));
 	}
 
 	/**
@@ -237,9 +223,8 @@ public class SquareTest {
 	@Test
 	public void testMergeWith() {
 		testSquare4.mergeWith(Direction.EAST);
-		// TODO gebruik assert equals
-		assertTrue(testSquare4.getTemperature() == -20);
-		assertTrue(testSquare3.getTemperature() == -20);
+		assertEquals(testSquare4.getTemperature(),-20);
+		assertEquals(testSquare3.getTemperature(),-20);
 	}
 	@Test (expected = IllegalArgumentException.class)
 	public void testMergeWithException() {
@@ -247,25 +232,16 @@ public class SquareTest {
 		fail("The exception must be thrown");
 	}
 
-	
-	// TODO replace with test that tests destruction of obstacle (not of wall resp door)
 	/**
 	 * Test method for destroyWallAt().
 	 */
 	@Test
 	public void testDestroyWallAt() {
 		testSquare4.destroyObstacleAt(Direction.EAST);
-		assertFalse(testSquare4.hasWall(Direction.EAST));
-		assertFalse(testSquare3.hasWall(Direction.EAST.oppositeDirection()));
+		assertEquals(testSquare4.getObstacleAt(Direction.EAST), null);
+		assertEquals(testSquare3.getObstacleAt(Direction.EAST.oppositeDirection()), null);
 	}
-	// TODO  total implementation -> exception should never be thrown
-	@Test (expected = IllegalArgumentException.class)
-	public void testDestroyWallAtException() {
-		testSquare1.destroyObstacleAt(Direction.UP);
-		testSquare1.destroyObstacleAt(Direction.UP);
-		fail("The exception must be thrown");
-	}
-
+	
 	/**
 	 * Test method for hasProperNeighbors().
 	 */
@@ -285,22 +261,6 @@ public class SquareTest {
 		assertTrue(testSquare4.canHaveAsNeighbor(null));
 		assertTrue(testSquare4.canHaveAsNeighbor(testSquare1));
 	}
-	
-	//TODO removed test, because method does not exist anymore
-	/**
-	 * Test method for copyNeighbors().
-	 */
-	/*@Test
-	public void testCopyNeighbors() {
-		Square testSquareCopy = new Square();
-		testSquareCopy.copyNeighbors(testSquare4);
-		assertEquals(testSquareCopy.getNeighborAt(Direction.NORTH), testSquare4.getNeighborAt(Direction.NORTH));
-		assertEquals(testSquareCopy.getNeighborAt(Direction.SOUTH), testSquare4.getNeighborAt(Direction.SOUTH));
-		assertEquals(testSquareCopy.getNeighborAt(Direction.WEST), testSquare4.getNeighborAt(Direction.WEST));
-		assertEquals(testSquareCopy.getNeighborAt(Direction.EAST), testSquare4.getNeighborAt(Direction.EAST));
-		assertEquals(testSquareCopy.getNeighborAt(Direction.UP), testSquare4.getNeighborAt(Direction.UP));
-		assertEquals(testSquareCopy.getNeighborAt(Direction.DOWN), testSquare4.getNeighborAt(Direction.DOWN));
-	}*/
 	
 	/**
 	 * Test method for removeNeighbor().

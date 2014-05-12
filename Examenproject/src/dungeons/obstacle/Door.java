@@ -72,16 +72,33 @@ public class Door extends Obstacle {
 	 * 
 	 * @param square The square where the obstacle is needed.
 	 * @param dir Direction in which the obstacle is needed.
-	 * @return Returns true if there is a neighbor at the given direction.
-	 * 		|return == square.hasNeighborAt(dir)
+	 * @return If the square is null, terminated or a rock, then return false. Else return true.
+	 * 		|if(square == null || square.isTerminated() || square.notAlwaysSurroundedByWalls() || square.getNeighborAt(dir) == null)
+	 * 		|	then return == false
+	 * 		|else
+	 * 		|	return == true
 	 */
 	public boolean canBeAnObstacleAt(Square square, Direction dir) {
-		return square.hasNeighborAt(dir);
+		if((square == null) ||(square.isTerminated()) || (square.notAlwaysSurroundedByWalls()) || (square.getNeighborAt(dir) == null)){
+			return false;
+		}
+		else{
+			return true;
+		}
 	}
-	
 	/**
 	 * Variable to store the moveability of the door.
 	 */
 	private boolean isOpen;
 
+	/**
+	 * Method that indicates if the door is moveable through.
+	 * 
+	 * @return Returns true if the door is open.
+	 * 		|result == isOpen()
+	 */
+	@Override
+	public boolean canMoveThrough(){
+		return isOpen;
+	}
 }
