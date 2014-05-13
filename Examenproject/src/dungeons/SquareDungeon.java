@@ -147,6 +147,7 @@ public class SquareDungeon extends Dungeon {
 				// Finally it will update the temperature if needed.
 				square.registerNeighbor(n, d, destroyObstacle);
 			}
+		square.setDungeon(this, position);
 		}
 	}
 

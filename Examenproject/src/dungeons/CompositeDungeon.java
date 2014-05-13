@@ -260,7 +260,7 @@ public class CompositeDungeon extends Dungeon{
 			}
 			// this would be the place to add an exception that no square was added (not necessary).
 		}
-		
+		square.setDungeon(this, position);
 	}
 
 	/**

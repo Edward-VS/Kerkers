@@ -116,7 +116,35 @@ public class Square {
 	private boolean isTerminated;
 
 	
+	/***********************************************************
+	 * DUNGEONS (Defensive)
+	 ***********************************************************/
 	
+	/**
+	 * Inspector to retrieve the dungeon.
+	 */
+	@Basic
+	public Dungeon getDungeon(){
+		return dungeon;
+	}
+	
+	/**
+	 * Method to set dungeon.
+	 * 
+	 * @param dungeon The dungeon to set.
+	 * @post The dungeon will be set if possible.
+	 * 		|if(dungeon.canHaveAsSquare(this))
+	 * 		|	then this.getDungeon() == dungeon
+	 */
+	public void setDungeon(Dungeon dungeon, Point position){
+		if(dungeon.canHaveAsSquareAt(this, position)){
+			this.dungeon = dungeon;
+		}
+	}
+	/**
+	 * Variable to store the dungeon where it belongs too.
+	 */
+	private Dungeon dungeon;
 	
 	/***********************************************************
 	 * TEMPERATURE (Defensive)
@@ -439,6 +467,9 @@ public class Square {
 	/**
 	 * Inspector to tell if the square is always surrounded by walls or not.
 	 * This is a property of a Rock.
+	 * 
+	 * @return Always returns true for a Square.
+	 * 		|result == true
 	 */
 	@Basic
 	@Immutable
@@ -447,18 +478,33 @@ public class Square {
 	}
 	
 	/**
+	 * Method to coördinate all the casts of a door in one method. 
+	 * This way we have less casts concering doors.
+	 * 
+	 * @param dir The direction in which we want to work.
+	 * @return If the obstacle is a door, it returns the cast. Else it returns null.
+	 * 		|if(this.getObstacleAt(dir) instanceof Door)
+	 * 		|	then result == (Door)this.getObstacleAt(dir)
+	 *		|else result == null
+	 */
+	@Model
+	private Door getDoor(Direction dir){
+		if(this.getObstacleAt(dir) instanceof Door){
+			return (Door)this.getObstacleAt(dir);
+		}
+		else{
+			return null;
+		}
+	}
+	/**
 	 * Inspector to check if a square has a door in a certain direction.
 	 * 
 	 * @param dir The direction you want to check.
 	 * @return Returns true if the square has a door in that direction.
-	 * 		|return == (this.getObstacleAt(dir) instanceof Door)
+	 * 		|return == this.getDoor(dir) != null
 	 */
 	public boolean hasDoor(Direction dir) {
-		if (this.getObstacleAt(dir) instanceof Door) {
-			return true;
-		} else {
-			return false;
-		}
+		return this.getDoor(dir) != null;
 	}
 	
 	/**
@@ -467,14 +513,14 @@ public class Square {
 	 * @param dir The direction in which you want to check the door.
 	 * @return If there is a door in that direction, returns true if the door is open.
 	 * 		|if(this.hasDoor(dir))
-	 * 		|	then return == ((Door)this.getObstacleAt(dir)).isOpen()
+	 * 		|	then return == this.getDoor(dir).isOpen()
 	 * @return If there is no door in that direction, returns false.
 	 * 		|if(!this.hasDoor(dir))
 	 * 		|	then return == false
 	 */
 	public boolean isOpen(Direction dir){
 		if(this.hasDoor(dir)){
-			return ((Door)this.getObstacleAt(dir)).isOpen();
+			return this.getDoor(dir).isOpen();
 		}
 		else{
 			return false;
@@ -486,13 +532,15 @@ public class Square {
 	 * 
 	 * @param dir The direction you want to check.
 	 * @return Returns true if the square has a wall in that direction.
-	 * 		|return == (getObstacleAt(dir) instanceof Wall)
+	 * 		|if((this.getDoor(dir) != null) || (this.getObstacleAt(dir) == null))
+	 * 		|	then result == false
+	 * 		|else result == true
 	 */
 	public boolean hasWall(Direction dir) {
-		if (this.getObstacleAt(dir) instanceof Wall) {
-			return true;
-		} else {
+		if((this.getDoor(dir) != null) || (this.getObstacleAt(dir) == null)) {
 			return false;
+		} else {
+			return true;
 		}
 	}
 
@@ -658,15 +706,15 @@ public class Square {
 	 * @post If there is a door in that direction, the method opens the door.
 	 * 		The temperature will also be recalculated for the newly formed group
 	 * 		|if this.hasDoor(dir)
-	 * 		|	then new.isOpen() == true
+	 * 		|	then new.isOpen(dir) == true
 	 * 		|		&& new.getTemperature() == this.calculateUpdateTemperature()
 	 * @return If there is no door in that direction, the method does nothing.
 	 * 		|if !this.hasDoor(dir)
-	 * 		|	then new.isOpen() == false
+	 * 		|	then new.isOpen(dir) == false
 	 */
 	public void setOpen(Direction dir){
 		if(this.hasDoor(dir)){
-			((Door)this.getObstacleAt(dir)).setOpen();
+			getDoor(dir).setOpen();
 			this.updateTemperature();
 		}
 	}
@@ -727,7 +775,7 @@ public class Square {
 	 * Variable to store if this square must be surrounded by wall at all time or not.
 	 * This is a property of a rock.
 	 */
-	private final boolean NOTALWAYSSURROUNDEDBYWALLS = false;
+	private final boolean NOTALWAYSSURROUNDEDBYWALLS = true;
 	
 
 	
@@ -967,7 +1015,7 @@ public class Square {
 	 * 		then an opening is created between the new neighbors
 	 * 		|		else if !this.hasObstacleAt(direction) || !square.hasObstacleAt(direction.oppositeDirection())
 	 * 		|			then destroyObstacleAt(direction)
-	 * // TODO Wat gebeurt er als beiden een obstacle hebben, maar een verschillend?
+	 * // TODO Opmerking christof: Wat gebeurt er als beiden een obstacle hebben, maar een verschillend?
 	 * @note This square might already have a neighbor in the given direction, or the given square might already
 	 * 		have a neighbor in the opposite direction. These 'external neighbor' are also handled by this method
 	 * 		(they don't have that neighbor anymore, and a wall is build)
@@ -1003,9 +1051,9 @@ public class Square {
 		}else{
 			if( this.hasDoor(direction) || square.hasDoor(direction.oppositeDirection())){
 				if(this.hasDoor(direction))
-					buildDoorAt(direction, ((Door)this.getObstacleAt(direction)).isOpen()); //TODO get rid of typecast
+					buildDoorAt(direction, this.getDoor(direction).isOpen());
 				else if(square.hasDoor(direction.oppositeDirection()))
-					buildDoorAt(direction, ((Door)square.getObstacleAt(direction.oppositeDirection())).isOpen()); //TODO get rid of typecast
+					buildDoorAt(direction, square.getDoor(direction.oppositeDirection()).isOpen());
 			}else if(this.hasWall(direction) || square.hasWall(direction.oppositeDirection()))
 				buildWallAt(direction);
 			else if(this.getObstacleAt(direction) == null || square.getObstacleAt(direction.oppositeDirection()) == null)
@@ -1013,7 +1061,7 @@ public class Square {
 			else {
 				// use old obstacle of this
 				if(hasDoor(direction))
-					buildDoorAt(direction, ((Door)this.getObstacleAt(direction)).isOpen()); // TODO typecast
+					buildDoorAt(direction, this.getDoor(direction).isOpen()); 
 				else if(hasWall(direction))
 					buildWallAt(direction);
 				else

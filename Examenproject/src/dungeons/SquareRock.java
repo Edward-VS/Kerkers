@@ -40,8 +40,11 @@ public class SquareRock extends Square {
 	}
 	
 	/**
-	 * Inspector to tell if the square is always surrounded by walls or not.
+	 * Inspector to tell if the square can sometimes not be surrounded by walls.
 	 * This is a property of a Rock.
+	 * 
+	 * @return Returns false for a rock, because it must always be surrounded by walls.
+	 * 		|result == false
 	 */
 	@Basic
 	@Immutable
@@ -54,5 +57,5 @@ public class SquareRock extends Square {
 	 * Variable to store if this square must be surrounded by wall at all time or not.
 	 * This is a property of a rock.
 	 */
-	private final boolean NOTALWAYSSURROUNDEDBYWALLS = true;
+	private final boolean NOTALWAYSSURROUNDEDBYWALLS = false;
 }
