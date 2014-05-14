@@ -3,6 +3,7 @@
  */
 package dungeons;
 
+import dungeons.util.Direction;
 import be.kuleuven.cs.som.annotate.Basic;
 import be.kuleuven.cs.som.annotate.Immutable;
 
@@ -21,7 +22,9 @@ import be.kuleuven.cs.som.annotate.Immutable;
  * 		|hasProperNeighbors() == true
  * @invar The temperature must be the same as the other squares of its group.
  * 		Also the temperature must be between valid boundaries.
- * 		|hasProperTemperature() == true
+ * 		A group is the square itself because of the walls at all boundaries.
+ * 		The temperature must be the the average of the surrounding temperatures.
+ * 		|hasProperTemperature() == true 		
  */
 public class Rock extends Square {
 
@@ -37,6 +40,39 @@ public class Rock extends Square {
 	 */
 	public Rock(){
 		super();
+	}
+	
+	/**
+	 * Checker that tells if the current temperature is valid.
+	 * 
+	 * @return Returns true if the temperature is between the two boundary temperatures and the temperature
+	 * 		is the same as in the other squares of the group containing this square.
+	 * 		|return == (isValidTemperature(this.getTemperature()) 
+	 * 		|			&& (this.getTemperature() == this.calculateUpdateTemperature())
+	 */
+	public boolean hasProperTemperature(){
+		return (isValidTemperature(this.getTemperature()) && (this.getTemperature() == this.calculateUpdateTemperature()));
+	}
+	
+	/**
+	 * Method to calculate the temperature of a rock without changing it.
+	 * Other methods will then update the temperature.
+	 * 
+	 * @return Because the group is limited too the square itself the group temperature is no longer a problem.
+	 * 		But now the temperature must be the average of the temperature of the surrounding squares.
+	 * 		|for each direction in Direction.Values():
+	 * 		|	sum = sum + this.getNeighborAt(direction).getTemperature()
+	 * 		| 	i=i+1
+	 * 		|result == sum / i
+	 */
+	public int calculateUpdateTemperature() {
+		int sum = 0;
+		int i =0;
+		for(Direction dir: Direction.values()){
+			sum = sum + this.getNeighborAt(dir).getTemperature();
+			i=i+1;
+		}
+		return sum/i;
 	}
 	
 	/**

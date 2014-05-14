@@ -400,7 +400,7 @@ public class Square {
 	/**
 	 * Variable to store the default temperature.
 	 */
-	private static final int DEFAULT_TEMPERATURE = 20;
+	private static final int DEFAULT_TEMPERATURE = 0;
 
 	/**
 	 * Variable to store the maximum temperature.
@@ -616,7 +616,7 @@ public class Square {
 	 */
 	public boolean canHaveAsObstacleAt(Direction dir, Obstacle obstacle) {
 		if(obstacle == null){
-			return this.getNeighborAt(dir) != null;
+			return this.getNeighborAt(dir) != null && this.notAlwaysSurroundedByWalls();
 		}
 		else{
 			return obstacle.canBeAnObstacleAt(this, dir);
@@ -994,7 +994,11 @@ public class Square {
 	 * 		| if square != null && direction != null
 	 * 		|	then new.hasAsNeighborAt(square, direction)
 	 * 		|		&& (new square).hasAsNeighborAt(this, direction.oppositeDirection())
-	 * @effect If destroyObstacle is true and this square and the new neighbor can have an opening between them,
+	 * @effect If this square must stay surrounded by walls, then the obstacles are set to walls. 
+	 * 		The temperature of the new neighbor will be updated.
+	 * 		|if(this.notAlwaysSurroundedByWalls == false)
+	 * 		|	then buildWallAt(direction) && new.getNeighborAt(direction).updateTemperature
+	 *		If destroyObstacle is true and this square and the new neighbor can have an opening between them,
 	 * 		then this square and the given square will have an opening between them.
 	 * 		| if(destroyObstacle == true
 	 * 		|	&& this.canHaveAsObstacleAt(direction, null)
@@ -1015,7 +1019,6 @@ public class Square {
 	 * 		then an opening is created between the new neighbors
 	 * 		|		else if !this.hasObstacleAt(direction) || !square.hasObstacleAt(direction.oppositeDirection())
 	 * 		|			then destroyObstacleAt(direction)
-	 * // TODO Opmerking christof: Wat gebeurt er als beiden een obstacle hebben, maar een verschillend?
 	 * @note This square might already have a neighbor in the given direction, or the given square might already
 	 * 		have a neighbor in the opposite direction. These 'external neighbor' are also handled by this method
 	 * 		(they don't have that neighbor anymore, and a wall is build)
@@ -1045,27 +1048,33 @@ public class Square {
 		setNeighborAt(direction, square);
 		square.setNeighborAt(direction.oppositeDirection(), this);
 		
-		// If the obstacle must be destroyed, then do so. (Only posible if this square and the niehgbor are not Rock)
-		if(destroyObstacle && this.canHaveAsObstacleAt(direction, null) && square.canHaveAsObstacleAt(direction.oppositeDirection(), null)){
-			destroyObstacleAt(direction);
-		}else{
-			if( this.hasDoor(direction) || square.hasDoor(direction.oppositeDirection())){
-				if(this.hasDoor(direction))
-					buildDoorAt(direction, this.getDoor(direction).isOpen());
-				else if(square.hasDoor(direction.oppositeDirection()))
-					buildDoorAt(direction, square.getDoor(direction.oppositeDirection()).isOpen());
-			}else if(this.hasWall(direction) || square.hasWall(direction.oppositeDirection()))
-				buildWallAt(direction);
-			else if(this.getObstacleAt(direction) == null || square.getObstacleAt(direction.oppositeDirection()) == null)
+		// If the obstacle must be destroyed, then do so. (Only possible if this square and the neighbor are not Rock)
+		if(this.notAlwaysSurroundedByWalls() == false){
+			buildWallAt(direction);
+			this.getNeighborAt(direction).updateTemperature();
+		}
+		else{
+			if(destroyObstacle && this.canHaveAsObstacleAt(direction, null) && square.canHaveAsObstacleAt(direction.oppositeDirection(), null)){
 				destroyObstacleAt(direction);
-			else {
-				// use old obstacle of this
-				if(hasDoor(direction))
-					buildDoorAt(direction, this.getDoor(direction).isOpen()); 
-				else if(hasWall(direction))
+			}else{
+				if( this.hasDoor(direction) || square.hasDoor(direction.oppositeDirection())){
+					if(this.hasDoor(direction))
+						buildDoorAt(direction, this.getDoor(direction).isOpen());
+					else if(square.hasDoor(direction.oppositeDirection()))
+						buildDoorAt(direction, square.getDoor(direction.oppositeDirection()).isOpen());
+				}else if(this.hasWall(direction) || square.hasWall(direction.oppositeDirection()))
 					buildWallAt(direction);
-				else
+				else if(this.getObstacleAt(direction) == null || square.getObstacleAt(direction.oppositeDirection()) == null)
 					destroyObstacleAt(direction);
+				else {
+					// use old obstacle of this
+					if(hasDoor(direction))
+						buildDoorAt(direction, this.getDoor(direction).isOpen()); 
+					else if(hasWall(direction))
+						buildWallAt(direction);
+					else
+						destroyObstacleAt(direction);
+				}
 			}
 		}
 	}
