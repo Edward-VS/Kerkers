@@ -8,7 +8,7 @@ import static org.junit.Assert.*;
 import org.junit.Test;
 
 /**
- * Testclass for Direction
+ * Testclass for Direction.
  * 
  * @author Christof Vermeersch & Edward Van Sieleghem
  */
