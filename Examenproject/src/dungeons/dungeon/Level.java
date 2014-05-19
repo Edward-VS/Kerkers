@@ -1,13 +1,13 @@
-package dungeons;
+package dungeons.dungeon;
 
 import be.kuleuven.cs.som.annotate.Raw;
 import dungeons.exception.IllegalMaximumDimensionsException;
 import dungeons.util.Point;
 
 /**
- * A Level is a SquareDungeon that can only contain squares in the z=0 plane (given that all squares have
+ * <p>A Level is a SquareDungeon that can only contain squares in the z=0 plane (given that all squares have
  * a zero-bases position). This restriction implies that the maximum dimensions of a Level must comply
- * with more conditions compared to a SquareDungeon.
+ * with more conditions compared to a SquareDungeon.</p>
  * 
  * @see Documentation of SquareDungeon is also valid.
  * 
@@ -22,7 +22,6 @@ import dungeons.util.Point;
  * 		| hasProperParentDungeon()
  *
  * @author Edward Van Sieleghem & Christof Vermeersch
- *
  */
 
 public class Level extends SquareDungeon{
@@ -42,6 +41,15 @@ public class Level extends SquareDungeon{
 		super(maximumDimensions);
 	}
 	
+	/**
+	 * Construct a new level with maximum dimensions (1,1,1). (it can contain one square)
+	 * 
+	 * @effect A new dungeon is constructed with maximum dimensions (1,1,1)
+	 * 		| this(Point.CUBE)
+	 */
+	public Level() throws IllegalMaximumDimensionsException {
+		this(Point.CUBE);
+	}
 	
 	
 	/***********************************************************
@@ -53,32 +61,42 @@ public class Level extends SquareDungeon{
 	 * 
 	 * @param maximumDimensions
 	 *		A point that represents the maximum dimensions.
-	 * @return If the given maximum dimensions are null, than false
-	 * 		| if maximumDimensions == null
+	 * @return If the given maximum dimensions do not comply with the conditions imposed on it by a
+	 * 		super-type of Level, then false.
+	 * 		| if !super.canHaveAsMaximumDimensions(maximumDimensions)
 	 * 		|	then result == false
-	 * @return	Else if the given maximum dimensions are bigger that the maximum allowed dimensions
-	 *		then false
-	 *		| if !maximumDimensions.isEqualOrSmallerThanValue(ABSOLUTE_MAXIMUM_DIMENSIONS)
-	 *		|	then result == false
-	 * @return Else if the given maximum dimensions are smaller or equal to zero, then false
-	 *		| if maximumDimensions.isEqualOrSmallerThanValue(0)
-	 *		|	then result == false
-	 * @return Else if this dungeon has a parent, and the given maximum dimensions are not legal for this dungeon
-	 *		in that parent, then false
-	 *		| if getParentDungeon() != null
-	 *		|	&& !getParentDungeon().overlapsWithOtherSubDungeon(this, maximumDimensions))
-	 *		|	then result == false
-	 *		Else true.
 	 * @return Else if the given maximum dimensions have a z-coordinate that is bigger than 1, then false.
-	 * 		| if  
+	 * 		| else if maximumDimensions.getZ() != 1
+	 * 		|	then result == false
+	 * @return Else true
+	 * 		| else result == false
 	 */
-	@Raw
+	@Raw @Override
 	public boolean canHaveAsMaximumDimensions(Point maximumDimensions) {
 		if(!super.canHaveAsMaximumDimensions(maximumDimensions))
 			return false;
 		if(maximumDimensions.getZ() != 1)
 			return false;
 		return true;
+	}
+	
+	/**
+	 * Enlarge this level with the given amount.
+	 * 
+	 * @param x
+	 * 		The amount to enlarge this level with in the x direction.
+	 * @param y
+	 * 		The amount to enlarge this level with in the y direction.
+	 * @pre The x and y values are bigger than or equal to zero
+	 * 		| x >= 0 && y >= 0
+	 * @effect The dimensions of this level are enlarged with the given amount.
+	 * 		| changeMaximumDimensions(getMaximumDimensions().add(new Point(x, y, 0)))
+	 * @throws IllegalMaximumDimensionsException [MUST]
+	 * 		The new maximum dimensions are illegal
+	 * 		| !canHaveAsMaximumDimsnesions(getMaximumDimensions().add(new Point(x, y, 0)))
+	 */
+	public void enlarge(int x, int y) throws IllegalMaximumDimensionsException{
+		changeMaximumDimensions(getMaximumDimensions().add(new Point(x, y, 0)));
 	}
 	
 }

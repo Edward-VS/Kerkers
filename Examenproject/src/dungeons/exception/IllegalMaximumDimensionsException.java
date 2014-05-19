@@ -1,6 +1,7 @@
 package dungeons.exception;
 
 import be.kuleuven.cs.som.annotate.Basic;
+import be.kuleuven.cs.som.annotate.Immutable;
 import dungeons.util.Point;
 
 /**
@@ -27,7 +28,7 @@ public class IllegalMaximumDimensionsException extends Exception {
 	/**
 	 * Get the illegal dimensions associated with this exception.
 	 */
-	@Basic
+	@Basic @Immutable
 	public Point getDimensions(){
 		return dimensions;
 	}

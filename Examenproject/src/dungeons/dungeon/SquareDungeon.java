@@ -1,4 +1,4 @@
-package dungeons;
+package dungeons.dungeon;
 
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
@@ -10,18 +10,20 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import be.kuleuven.cs.som.annotate.Basic;
+import dungeons.exception.IllegalDungeonException;
 import dungeons.exception.IllegalMaximumDimensionsException;
+import dungeons.square.Square;
 import dungeons.util.Direction;
 import dungeons.util.Point;
 import dungeons.util.SquareIterator;
 
 /**
- * A SquareDungeons is a Dungeon that contain references of squares (in a direct way <-> CompositeDungeon). All squares have
- * as position relative to the origin of the SquareDungeon they are stored in.
+ * <p>A SquareDungeons is a Dungeon that contain references of squares (in a direct way <-> CompositeDungeon). All squares have
+ * as position relative to the origin of the SquareDungeon they are stored in.</p>
  * 
- * The total memory that is used to store squares in a SquareDungeon is O(n) where n is the amount of effective square.
+ * <p>The total memory that is used to store squares in a SquareDungeon is O(n) where n is the amount of effective square.</p>
  * 
- * @see Documentation of Dungeon is also valid.
+ * @see Documentation of AbstractDungeon is also valid.
  * 
  * @invar A SquareDungeon must always have maximum dimensions that are smaller or equal to the maximum allowed dimensions,
  * 		bigger than (0,0,0), in compliance with the dimensions of its parent dungeon (if any) and legal in any other way.
@@ -35,7 +37,7 @@ import dungeons.util.SquareIterator;
  * @author Edward Van Sieleghem & Christof Vermeersch
  */
 
-public class SquareDungeon extends Dungeon {
+public abstract class SquareDungeon extends AbstractDungeon {
 
 	/**
 	 * Construct a new dungeon with the given maximum dimensions.
@@ -48,9 +50,19 @@ public class SquareDungeon extends Dungeon {
 	 * 		[MUST] The given maximum dimensions are not legal
 	 * 		| !canHaveAsMaximumDimensions(maximumDimensions)
 	 */
-	public SquareDungeon(Point maximumDimensions) throws IllegalMaximumDimensionsException {
+	protected SquareDungeon(Point maximumDimensions) throws IllegalMaximumDimensionsException {
 		super(maximumDimensions);
 		squares = new TreeMap<Point, Square>();
+	}
+	
+	/**
+	 * Construct a new square dungeon with maximum dimensions (1,1,1). (it can contain one square)
+	 * 
+	 * @effect A new dungeon is constructed with maximum dimensions (1,1,1)
+	 * 		| this(Point.CUBE)
+	 */
+	protected SquareDungeon() throws IllegalMaximumDimensionsException {
+		this(Point.CUBE);
 	}
 
 	/*****************************************************************
@@ -72,7 +84,7 @@ public class SquareDungeon extends Dungeon {
 	 * @param position
 	 * 		A position relative to the origin of this dungeon.
 	 * 
-	 * @see Dungeon
+	 * @see AbstractDungeon
 	 */
 	@Override
 	@Basic
@@ -105,14 +117,14 @@ public class SquareDungeon extends Dungeon {
 		}
 		return null;
 	}
-
+	
 	/**
 	 * Check whether this dungeon has the given square as one of its squares.
 	 * 
 	 * @param square
 	 * 		The square to check for.
 	 * 
-	 * @see Dungeon
+	 * @see AbstractDungeon
 	 */
 	@Override
 	public boolean hasAsSquare(Square square) {
@@ -123,48 +135,111 @@ public class SquareDungeon extends Dungeon {
 	 * Add the given square to this dungeon at the given position relative to the origin of this dungeon,
 	 * and make sure that the obstacles in the given directions are destroyed (if possible).
 	 * 
-	 * @see Dungeon
+	 * @param square
+	 * 		The square to add to this dungeon.
+	 * @param position
+	 * 		The position to add the given square to relative to the origin of this dungeon.
+	 * @param destroyObstacles
+	 * 		An array of directions in which obstacles should destroy
 	 * 
+	 * @see AbstractDungeon
+
 	 */
 	@Override
 	public void addAsSquareAt(Square square, Point position, Direction... destroyObstacles) {
 		if (!canHaveAsSquareAt(square, position) && square != null)
 			return;
 		
-		squares.put(position, square);
-
+		Square removed = squares.put(position, square);
+		
 		// Neighbors of squares are according to the root dungeon, so we get some information of our root.
 		Point posInRoot = position.add(getPositionInRoot());
 		Dungeon root = getRootDungeon();
 		
 		for (Direction d : Direction.values()) {
-			// Check whether the obstacle should be destroyed between the new tile, and its neighbor in this direction
-			boolean destroyObstacle = Arrays.asList(destroyObstacles).contains(d);
+			boolean destroyObstacle = Arrays.asList(destroyObstacles).contains(d) || !canHaveWallAt(position, d);
+
 			Square n = root.getSquareInDirectionOfPosition(posInRoot, d);
 			if (n != null){
-				// This method will register the bidirectional between the given square and its new neighbor.
-				// It will also break the bidirectional association with the old square on the given position (if any).
-				// Finally it will update the temperature if needed.
 				square.registerNeighbor(n, d, destroyObstacle);
+				// neighbor of replaced obstacle is also updated...
 			}
-		square.setDungeon(this, position);
+		}
+		
+		try {
+			square.setDungeon(this);
+			if(removed != null)
+				removed.setDungeon(null);
+		} catch (IllegalDungeonException e) {
+			// never happens
+			assert false;
 		}
 	}
-
+	
+	/**
+	 * Swap the square at the given position in this dungeon with the given square.
+	 * 
+	 * @param position
+	 * 		The position of the square in this dungeon to swap
+	 * @param other
+	 * 		The square to swap the square at he given position in this dungeon with.
+	 * 
+	 * @see AbstractDungeon
+	 */
+	@Override
+	public void swapSquareAt(Point position, Square other){
+		if(!hasSquareAt(position) || other == null)
+			return;
+		
+		Dungeon root = getRootDungeon();
+		SquareDungeon dunOfOther = root.getDungeonContainingPosition(root.getPositionOfSquare(other));
+		
+		if(dunOfOther != null){
+			Point posOfOther = dunOfOther.getPositionOfSquare(other);
+			Square squareAtPos = getSquareAt(position);
+			
+			dunOfOther.squares.remove(posOfOther);
+			squares.remove(position);
+			dunOfOther.squares.put(posOfOther, squareAtPos);
+			squares.put(position, other);
+			
+			for(Direction d: Direction.values()){
+				other.swapNeighbor(squareAtPos, d);
+			}
+			
+			try {
+				other.setDungeon(this);
+				squareAtPos.setDungeon(dunOfOther);
+			} catch (IllegalDungeonException e) {
+				// will never happen
+				assert false;
+			}
+		}
+	}
+	
 	/**
 	 * Remove the square at the given position from this dungeon if it is present.
 	 * 
-	 * @see Dungeon
+	 * @param position
+	 * 		The position to remove the square from
+	 * 
+	 * @see AbstractDungeon
 	 */
 	@Override
 	public void removeAsSquareAt(Point position) {
-		// TODO check can have as square? -> shaft must be filled with squares...
 		if (position != null) {
 			Square removed = squares.remove(position);
 			if (removed != null) {
 				// Neighbors are removed in all directions.
-				for (Direction d : Direction.values())
+				for (Direction d : Direction.values()){
 					removed.removeNeighbor(d);
+				}
+				try {
+					removed.setDungeon(null);
+				} catch (IllegalDungeonException e) {
+					// never happens
+					assert false;
+				}
 			}
 		}
 	}
@@ -173,28 +248,44 @@ public class SquareDungeon extends Dungeon {
 	 * Returns an iterator that iterates over all the squares in this dungeon from front(y)
 	 * to back, left(x) to right and bottom(z) to top.
 	 * 
-	 * @note return type of overwritten method is narrower than 
+	 * @note The iterator throws a ConcurrentModificationException when the internal TreeMap is modified
+	 * 		at any point in time when the iterator is in use.
 	 */
 	@Override
 	public SquareIterator iterator() {
 		return new SquareIterator() {
-			// TODO doc
+			/**
+			 * Check whether this iterator has a next element
+			 */
 			@Override
 			public boolean hasNext() {
 				return master.hasNext();
 			}
 
+			/**
+			 * Retrieve the next element in iteration.
+			 * @return a square that also belong to this dungeon.
+			 * 		| hasAsSquare(result)
+			 */
 			@Override
 			public Square next() {
 				return master.next().getValue();
 			}
 
+			/**
+			 * Retrieve the next entry in iteration.
+			 * @return A key value pair that hold a square and its position in this dungeon.
+			 * 		| getPositionOfSquare(result.getValue()) == result.getKey()
+			 */
 			@Override
 			public SimpleEntry<Point, Square> nextEntry() {
 				Map.Entry<Point, Square> e = master.next();
 				return new SimpleEntry<Point, Square>(e.getKey(), e.getValue());
 			}
 
+			/**
+			 * The remove operation is not implemented
+			 */
 			@Override
 			public void remove() {
 				throw new UnsupportedOperationException();
@@ -209,8 +300,10 @@ public class SquareDungeon extends Dungeon {
 	 * 		The ordering of the tree is in accordance to the <code>compareTo()</code> method of Point.
 	 * 		The squares map should NEVER contain a null value.
 	 */
-	private TreeMap<Point, Square> squares;
+	protected TreeMap<Point, Square> squares;
 
+	
+	
 	/*****************************************************************
 	 * TERMINATION
 	 *****************************************************************/
@@ -218,10 +311,10 @@ public class SquareDungeon extends Dungeon {
 	/**
 	 * Terminate this dungeon.
 	 * 
-	 * @see Dungeon
+	 * @see AbstractDungeon
 	 */
 	public void terminate() {
-		isTerminated = true;
+		setTerminated(true);
 
 		TreeMap<Point, Square> oldSquares = new TreeMap<Point, Square>(squares);
 		for (Map.Entry<Point, Square> e : oldSquares.entrySet()) {
@@ -230,9 +323,8 @@ public class SquareDungeon extends Dungeon {
 
 		assert getNbSquares() == 0;
 
-		CompositeDungeon oldParent = getParentDungeon();
-		if (oldParent != null) {
-			oldParent.removeAsSubDungeon(this);
+		if (getParentDungeon() != null) {
+			getParentDungeon().removeAsSubDungeon(this);
 		}
 
 		// When this method is left, all invariant are met
@@ -247,8 +339,7 @@ public class SquareDungeon extends Dungeon {
 	/**
 	 * Get all the levels and shafts that are contained within this dungeon.
 	 */
-	@Override
-	@Basic
+	@Override @Basic
 	public List<SquareDungeon> getLevelsAndShafts() {
 		ArrayList<SquareDungeon> res = new ArrayList<SquareDungeon>(1);
 		res.add(this);

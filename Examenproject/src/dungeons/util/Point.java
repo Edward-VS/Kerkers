@@ -1,5 +1,7 @@
 package dungeons.util;
 
+import java.util.Random;
+
 import be.kuleuven.cs.som.annotate.Basic;
 import be.kuleuven.cs.som.annotate.Immutable;
 
@@ -10,12 +12,6 @@ import be.kuleuven.cs.som.annotate.Immutable;
  * @author Edward Van Sieleghem & Christof Vermeersch
  */
 public class Point implements Comparable<Point>{
-
-	public static final Point ORIGIN = new Point(0,0,0);
-	
-	private int x;
-	private int y;
-	private int z;
 	
 	/**
 	 * Construct a new point with the given coordinates.
@@ -49,6 +45,11 @@ public class Point implements Comparable<Point>{
 		this(0,0,0);
 	}
 	
+	
+	/******************************************
+	 * MANIPULATIONS & COMPARISON
+	 ******************************************/
+	
 	/**
 	 * Get the left-right(x) coordinate of this point (left < right).
 	 */
@@ -77,11 +78,13 @@ public class Point implements Comparable<Point>{
 	}
 
 	/**
-	 * Add the dimensions of the given point to those of this point.
+	 * Add the coordinates of the given point to those of this point.
 	 * 
 	 * @param p
 	 * 		The point to add
-	 * @return A new Point of which the dimensions are equals to the dimension of this enlarged with the dimensions
+	 * @pre The given point is effective
+	 * 		| p != null
+	 * @return A new Point of which the coordinates are equals to the dimension of this enlarged with the dimensions
 	 * 		of the given point.
 	 * 		| result == new Point(getX()+p.getX(), getY()+p.getY(), getZ()+p.getZ())
 	 */
@@ -94,12 +97,24 @@ public class Point implements Comparable<Point>{
 	 * 
 	 * @param p
 	 * 		The point to subtract from this point
+	 * @pre The given point is effective
+	 * 		| p != null
 	 * @return A new Point of which the dimensions are equals to the dimension of this reduced by the dimensions
 	 * 		of the given point.
 	 * 		| result == new Point(getX()-p.getX(), getY()-p.getY(), getZ()-p.getZ())
 	 */
 	public Point subtract(Point p){
 		return new Point(getX()-p.getX(), getY()-p.getY(), getZ()-p.getZ());
+	}
+	
+	/**
+	 * Retrieve the norm of this point (=the distance to the origin).
+	 * 
+	 * @return The norm of this point.
+	 * 		| result == Math.sqrt(x*x+y*y+z*z)
+	 */
+	public Double norm(){
+		return Math.sqrt(x*x+y*y+z*z);
 	}
 	
 	/**
@@ -136,6 +151,8 @@ public class Point implements Comparable<Point>{
 	 * 
 	 * @param point
 	 * 		The point to check against.
+	 * @pre The given point is effective
+	 * 		| other != null
 	 * @return True if all coordinates of this points are bigger than- or equal to the coordinates
 	 * 		of the given point.
 	 * 		| result == getX() >= other.getX()
@@ -152,6 +169,8 @@ public class Point implements Comparable<Point>{
 	 * 
 	 * @param point
 	 * 		The point to check against.
+	 * @pre The given point is effective
+	 * 		| other != null
 	 * @return True if all coordinates of this points are smaller than- or equal to the coordinates
 	 * 		of the given point.
 	 * 		| result == getX() <= other.getX()
@@ -163,29 +182,13 @@ public class Point implements Comparable<Point>{
 	}
 	
 	/**
-	 * Check whether this point lays between the given two values. 
-	 * 
-	 * @param min
-	 * 		The minimum value each coordinate may have (inclusive)
-	 * @param max
-	 * 		The maximum value each coordinate max have (exclusive)
-	 * @return True if all coordinates (independently) lay between the given two values
-	 * 		|result == ( min <= getX() && max > getX()
-	 *		|	&& min <= getY() && max > getY()
-	 *		|	&& min <= getZ() && max > getZ() )
-	 */
-	public boolean between(int min, int max){
-		return min <= getX() && max > getX()
-				&& min <= getY() && max > getY()
-				&& min <= getZ() && max > getZ();
-	}
-	
-	/**
-	 * Check whether all the coordinates of this point are smaller then their respective
+	 * Check whether all the coordinates of this point are strictly smaller then the respective
 	 * coordinate of the given point.
 	 * 
 	 * @param other
 	 * 		The point to check against
+	 * @pre The given point is effective
+	 * 		| other != null
 	 * @return True if all the coordinates of this point are smaller then their respective
 	 * coordinate of the given point.
 	 * 		| result == (getX() < other.getX() && getY() < other.getY() && getZ() < other.getZ();
@@ -193,10 +196,9 @@ public class Point implements Comparable<Point>{
 	public boolean isSmallerThan(Point other){
 		return x < other.x && y < other.y && z < other.z;
 	}
-
 	
 	/**
-	 * Check whether two cubes overlap
+	 * Check whether two 'cubes' overlap. Cubes are defined by two points in space.
 	 * 
 	 * @param ps
 	 * 		The starting point of the first cube (inclusive)
@@ -206,15 +208,43 @@ public class Point implements Comparable<Point>{
 	 * 		The stating point of the second cube (inclusive)
 	 * @param qe
 	 * 		The ending point of the second cube (exclusive)
+	 * @pre The starting point of the first cube is smaller than the ending point of the first cube
+	 * 		| ps.isSmallerThan(pe)
+	 * @pre The starting point of the second cube is smaller than the ending point of the second cube
+	 * 		| qs.isSmallerThan(qe)
 	 * @return True if the two cubes with the given dimensions overlap
 	 * 		| result == pe.getX() > qs.getX() && ps.getX() < qe.getX())
 	 *		|			&& (pe.getY() > qs.getY() && ps.getY() < qe.getY())
 	 *		|			&& (pe.getZ() > qs.getZ() && ps.getZ() < qe.getZ()
 	 */
-	public static boolean overlap(Point ps, Point pe, Point qs, Point qe){     
+	public static boolean overlap(Point ps, Point pe, Point qs, Point qe){
+		assert ps.isSmallerThan(pe);
+		assert qs.isSmallerThan(qe);
 		return (pe.getX() > qs.getX() && ps.getX() < qe.getX())
 				&& (pe.getY() > qs.getY() && ps.getY() < qe.getY())
 				&& (pe.getZ() > qs.getZ() && ps.getZ() < qe.getZ());
+	}
+	
+	/**
+	 * Retrieve a random point in the range of (0,0,0) (inclusive) to this point (exclusive).
+	 * 
+	 * @param rand
+	 * 		A random object to generate the random point from.
+	 * @return A random point in the range of (0,0,0) (inclusive) to this point (exclusive)
+	 * 		| result == new Point(rand.nextInt(getX()), rand.nextInt(getY()), rand.nextInt(getZ()))
+	 */
+	public Point randomSmallerThanThis(Random rand){
+		return new Point(rand.nextInt(x), rand.nextInt(y), rand.nextInt(z));
+	}
+	
+	/**
+	 * Get the number of (1,1,1) cubes that this Point contains relative to the origin.
+	 * 
+	 * @return The number of (1,1,1) cubes that this Point contains relative to the origin.
+	 * 		| result == getX()*getY()*getZ()
+	 */
+	public int size(){
+		return x*y*z;
 	}
 	
 	/**
@@ -236,6 +266,13 @@ public class Point implements Comparable<Point>{
 		return false;
 	}
 	
+	/**
+	 * Retrieve the hash code of this Point.
+	 * 
+	 * @note We had to overwrite the method to ensure that hash structures can use a Point as key,
+	 * 		and that keys are 'reference independent' -> We want the hash code to be independent of
+	 * 		the address where the point is stored in memory.
+	 */
 	@Override
 	public int hashCode(){
 		int hash = 1;
@@ -246,10 +283,13 @@ public class Point implements Comparable<Point>{
 	}
 
 	/**
-	 * Compare this point the the given other point.
+	 * Compare this point to the given other point.
 	 * First the y-coordinates are compared. If those are equal the x coordinates are compared.
 	 * Finally the z-coordinates are compared.
-	 * 
+	 * @param other
+	 * 		The point to compare to
+	 * @pre The given point is effective
+	 * 		| other != null
 	 * @return A positive, neutral or negative integer, if this point is greater, equal or smaller
 	 * than the given point.
 	 * @note front < back << left < right << bottom < top
@@ -273,10 +313,37 @@ public class Point implements Comparable<Point>{
 		return 1;
 	}
 	
+	/**
+	 * Retrieve a string representation of this point.
+	 */
 	@Override
 	public String toString(){
 		return "(" + x + ", " + y + ", " + z + ")";
 	}
 	
+	/**
+	 * A point with coordinates (0,0,0)
+	 */
+	public static final Point ORIGIN = new Point(0,0,0);
+	
+	/**
+	 * A point with coordinates (1,1,1)
+	 */
+	public static final Point CUBE = new Point(1,1,1);
+	
+	/**
+	 * The x coordinate of this point
+	 */
+	private int x;
+	
+	/**
+	 * The y coordinate of this point
+	 */
+	private int y;
+	
+	/**
+	 * The z coordinate of this point
+	 */
+	private int z;
 	
 }

@@ -1,4 +1,4 @@
-package dungeons;
+package dungeons.dungeon;
 
 import static org.junit.Assert.*;
 
@@ -9,7 +9,7 @@ import dungeons.exception.IllegalMaximumDimensionsException;
 import dungeons.util.Point;
 
 /**
- * A Unit Test for the abstract class Dungeon. Most methods from Dungeon are tested in Unit tests SquareDungeonTest and CompositeDungeonTest
+ * A Unit Test for the AbstractDungeon. Most methods from Dungeon are tested in Unit tests SquareDungeonTest and CompositeDungeonTest
  * (instead of here). Where needed, methods are tested in both test classes (this is the case for methods that are overwritten in
  * the sub classes of Dungeon).
  * 
@@ -24,19 +24,19 @@ import dungeons.util.Point;
  * 
  * @author Edward Van Sieleghem & Christof Vermeersch
  */
-public class DungeonTest {
+public class AbstractDungeonTest {
 	
-	private Dungeon dungeon_dim500;
+	private AbstractDungeon dungeon_dim500;
 	
 	@Before
 	public void setUp() throws Exception {
-		dungeon_dim500 = new SquareDungeon(new Point(500,500,500));
+		dungeon_dim500 = new Level(new Point(500,500,1));
 	}
 	
 	@Test
 	public void testDungeonConstructor() throws IllegalMaximumDimensionsException{
 		Point dim = new Point(100,200,300);
-		Dungeon d = new CompositeDungeon(dim);
+		AbstractDungeon d = new CompositeDungeon(dim);
 		assertEquals(d.getMaximumDimensions(), dim);
 		// Note that most association in this program are partial, so they should
 		// not be initialized during construction. MaximumDimensions it's though.
@@ -48,37 +48,40 @@ public class DungeonTest {
 	
 	@Test
 	public void testCanHaveAsMaximumDimensions(){
-		Point goodDim = new Point(500,500,500);
-		Point tooLargeDim = new Point(500,500,5001);
-		Point negativeDim = new Point(-500,-500,-500);
+		// test some difference dimensions + boundaries
+		Point goodDim = new Point(500,500,1);
+		Point tooLargeDim = new Point(500,5001,1);
+		Point negativeDim = new Point(-500,-500,1);
 		Point origin = new Point(0,0,0);
+		Point goodButSmall = new Point (1,1,1);
 		
 		assertTrue(dungeon_dim500.canHaveAsMaximumDimensions(goodDim));
 		assertFalse(dungeon_dim500.canHaveAsMaximumDimensions(tooLargeDim)); // To large maximum dimensions
 		assertFalse(dungeon_dim500.canHaveAsMaximumDimensions(null)); // no dimensions at all
 		assertFalse(dungeon_dim500.canHaveAsMaximumDimensions(negativeDim)); // negative dimension
 		assertFalse(dungeon_dim500.canHaveAsMaximumDimensions(origin)); // no squares are contained...
-		
-		// for tests concerning overlapping sub-dungeons in the parent dungeon, see CompositeDungeonTest.
+		assertTrue(dungeon_dim500.canHaveAsMaximumDimensions(goodButSmall)); // one one square is contained -> legal!
 	}
 	
 	@Test
 	public void testCanAcceptAsNewMaximumDimensions(){
-		Point smallerDim = new Point(300,500,500);
-		Point largetDim = new Point(500,600,500);
+		// the size of a dungeon can only be enlarged
+		Point smallerDim = new Point(300,500,1);
+		Point largetDim = new Point(500,600,1);
 		assertTrue(dungeon_dim500.canAcceptAsNewMaximumDimensions(largetDim)); // larger maximum dimension
 		assertFalse(dungeon_dim500.canAcceptAsNewMaximumDimensions(smallerDim)); // smaller maximum dimensions
 	}
 
 	@Test
 	public void testChangeMaximumDimensions_legal() throws IllegalMaximumDimensionsException{
-		Point legalDim = new Point(501,501,501);
+		Point legalDim = new Point(501,501,1);
 		dungeon_dim500.changeMaximumDimensions(legalDim);
 		assertEquals(legalDim, dungeon_dim500.getMaximumDimensions());
 	}
 	
 	@Test (expected = IllegalMaximumDimensionsException.class)
 	public void testChangeMaximumDimensions_illegalTooSmall() throws IllegalMaximumDimensionsException{
+		// Test to check if exception triggers properly, when the size of a dungeon is changed to something illegal
 		Point tooSmallDim = new Point(499,500,500);
 		dungeon_dim500.changeMaximumDimensions(tooSmallDim);
 	}
@@ -91,18 +94,9 @@ public class DungeonTest {
 	//		or CompositeDungeonTest && SquareDungeonTest for all the other methods
 	
 	/*************************************************************
-	 * TERMINATION TESTS
-	 **************************************************************/
-	// see CompositeDungeonTest && SquareDungeonTest
-	
-	/*************************************************************
 	 * PARENT DUNGEON TESTS
 	 **************************************************************/
 	// see CompositeDungeonTest
 	
-	/*************************************************************
-	 * SUB DUNGEONS TESTS
-	 **************************************************************/
-	// see CompositeDungeonTest && SquareDungeonTest
 }
 

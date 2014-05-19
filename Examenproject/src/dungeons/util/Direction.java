@@ -13,15 +13,14 @@ import dungeons.util.Point;
 public enum Direction {
 	NORTH(new Point(0,1,0)), WEST(new Point(-1,0,0)), SOUTH(new Point(0,-1,0)), EAST(new Point(1,0,0)), UP(new Point(0,0,1)), DOWN(new Point(0,0,-1));
 	
-	private Point relPosition;
-	
 	/**
 	 * Construct a new direction with the given position relative to the origin in which the
 	 * direction should point.
 	 * 
 	 * @param x
 	 * 		The position relative to the origin in which this direction should point.
-	 * @post TODO
+	 * @post The relative position associated with this direction is the given relative position
+	 * 		| new.getRelativePosition() == relPosiiton
 	 */
 	private Direction(Point relPosition){
 		this.relPosition = relPosition;
@@ -74,7 +73,15 @@ public enum Direction {
 		case WEST:
 			return EAST;
 		}
+		assert false;
 		return null; // will never happen
 	}
+	
+	/**
+	 * The position relative to the origin associated with this direction
+	 * @invar The norm of this position is maximum one.
+	 * 		| relPosition.norm() <= 1
+	 */
+	private Point relPosition;
 	
 }

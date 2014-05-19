@@ -3,7 +3,7 @@
  */
 package dungeons.obstacle;
 
-import dungeons.Square;
+import dungeons.square.Square;
 import dungeons.util.Direction;
 import be.kuleuven.cs.som.annotate.*;
 
@@ -79,13 +79,20 @@ public class Door extends Obstacle {
 	 * 		|	return == true
 	 */
 	public boolean canBeAnObstacleAt(Square square, Direction dir) {
-		if((square == null) ||(square.isTerminated()) || (square.notAlwaysSurroundedByWalls()) || (square.getNeighborAt(dir) == null)){
+		/*if((square == null) ||(square.isTerminated()) || (square.notAlwaysSurroundedByWalls()) || (square.getNeighborAt(dir) == null)){
+			return false;
+		}
+		else{
+			return true;
+		}*/
+		if((square == null) ||(square.isTerminated()) || (square.getNeighborAt(dir) == null)){
 			return false;
 		}
 		else{
 			return true;
 		}
 	}
+	
 	/**
 	 * Variable to store the moveability of the door.
 	 */

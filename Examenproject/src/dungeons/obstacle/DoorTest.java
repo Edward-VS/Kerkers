@@ -8,8 +8,8 @@ import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
 
-import dungeons.Rock;
-import dungeons.Square;
+import dungeons.square.Rock;
+import dungeons.square.Square;
 import dungeons.util.Direction;
 
 /**

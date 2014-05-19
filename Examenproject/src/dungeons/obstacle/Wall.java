@@ -3,7 +3,7 @@
  */
 package dungeons.obstacle;
 
-import dungeons.Square;
+import dungeons.square.Square;
 import dungeons.util.Direction;
 
 /**

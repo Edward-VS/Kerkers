@@ -1,44 +1,45 @@
 package dungeons.exception;
 
 import be.kuleuven.cs.som.annotate.Basic;
-import dungeons.Dungeon;
+import be.kuleuven.cs.som.annotate.Immutable;
+import dungeons.dungeon.Dungeon;
 import dungeons.util.Point;
 
 /**
- * A class signaling an attempt of giving a composite dungeon an illegal sub dungeon at a specific position.
+ * A class signaling an attempt of an illegal transaction with a dungeon at a specific position.
  * 
  * @author Edward Van Sieleghem & Christof Vermeersch
  */
-public class IllegalSubDungeonAtPositionException extends IllegalSubDungeonException {
+public class IllegalDungeonAtPositionException extends IllegalDungeonException {
 
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * Initialize a new illegal sub dungeon exception involving the given dungeon at the given position.
+	 * Initialize a new illegal dungeon exception involving the given dungeon at the given position.
 	 * 
-	 * @param subDungeon
-	 * 		The illegal sub dungeon
+	 * @param dungeon
+	 * 		The illegal dungeon
 	 * @param position
-	 * 		The illegal position of the given sub dungeon
-	 * @post The illegal sub dungeon associated with this exception is the given sub dungeon.
+	 * 		The illegal position of the given dungeon
+	 * @post The illegal dungeon associated with this exception is the given dungeon.
 	 * 		| new.getSubDungeon() == dimensions
 	 * @post The illegal position associated with this exception is the given position.
 	 * 		| new.getPosition() == position
 	 */
-	public IllegalSubDungeonAtPositionException(Dungeon subDungeon, Point position) {
-		super(subDungeon);
+	public IllegalDungeonAtPositionException(Dungeon dungeon, Point position) {
+		super(dungeon);
 		this.position = position;
 	}
 	
 	/**
 	 * Get the illegal position associated with this exception.
 	 */
-	@Basic
+	@Basic @Immutable
 	public Point getPosition(){
 		return position;
 	}
 
-	/*
+	/**
 	 * The illegal position associated with this exception 
 	 */
 	private Point position;

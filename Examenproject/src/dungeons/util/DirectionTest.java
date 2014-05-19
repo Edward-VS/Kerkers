@@ -8,7 +8,7 @@ import static org.junit.Assert.*;
 import org.junit.Test;
 
 /**
- * Testclass for Direction.
+ * Unit test for Direction.
  * 
  * @author Christof Vermeersch & Edward Van Sieleghem
  */
@@ -31,6 +31,16 @@ public class DirectionTest {
 		assertEquals(eastDirection.oppositeDirection(), Direction.WEST);
 		assertEquals(upDirection.oppositeDirection(), Direction.DOWN);
 		assertEquals(downDirection.oppositeDirection(), Direction.UP);
+	}
+	
+	@Test
+	public void testGetPointInThisDirectionOf() {
+		assertEquals(new Point(1,3,3), Direction.NORTH.getPointInThisDirectionOf(new Point(1,2,3)));
+		assertEquals(new Point(1,1,3), Direction.SOUTH.getPointInThisDirectionOf(new Point(1,2,3)));
+		assertEquals(new Point(2,2,3), Direction.EAST.getPointInThisDirectionOf(new Point(1,2,3)));
+		assertEquals(new Point(0,2,3), Direction.WEST.getPointInThisDirectionOf(new Point(1,2,3)));
+		assertEquals(new Point(1,2,4), Direction.UP.getPointInThisDirectionOf(new Point(1,2,3)));
+		assertEquals(new Point(1,2,2), Direction.DOWN.getPointInThisDirectionOf(new Point(1,2,3)));
 	}
 
 }

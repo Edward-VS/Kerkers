@@ -1,32 +1,40 @@
-package dungeons;
+package dungeons.dungeon;
 
 import static org.junit.Assert.*;
 
 import org.junit.Before;
 import org.junit.Test;
 
+import dungeons.exception.IllegalDungeonAtPositionException;
+import dungeons.exception.IllegalDungeonException;
 import dungeons.exception.IllegalMaximumDimensionsException;
-import dungeons.exception.IllegalSubDungeonAtPositionException;
-import dungeons.exception.IllegalSubDungeonException;
+import dungeons.square.Rock;
+import dungeons.square.Square;
 import dungeons.util.Direction;
 import dungeons.util.Point;
 import dungeons.util.SquareIterator;
 
+/**
+ * Unit test concerning CompositeDungeon (and all untested methods of AbstractDungeon concerning parentDungeon)
+ * 
+ * @author Edward Van Sieleghem & Chrisfor Vermeersch
+ */
 public class CompositeDungeonTest {
 
 	private CompositeDungeon cmpDun_lvl0, cmpDun_lvl1;
 	private SquareDungeon sqrDun_lvl1, sqrDun_lvl2;
 	private Square sqr_1, sqr_2, sqr_3;
 	
+	/**
+	 * We build a small dungeon hierarchy that contains only a few actual squares that are connected.
+	 * (to prove that neighbors are root dependent, and not SquareDungeon limited)
+	 */
 	@Before
 	public void setUp() throws Exception {
-		
-		// We build a test setup of sub-dungeons with a couple of squares in them.
-
 		cmpDun_lvl0 = new CompositeDungeon(new Point(3,3,3));
 		cmpDun_lvl1 = new CompositeDungeon(new Point(3,3,1));
-		sqrDun_lvl1 = new SquareDungeon(new Point(3,3,1));
-		sqrDun_lvl2 = new SquareDungeon(new Point(2,2,1));
+		sqrDun_lvl1 = new Level(new Point(3,3,1));
+		sqrDun_lvl2 = new Level(new Point(2,2,1));
 		sqr_1 = new Square(63); // To make the test more dynamic, set a random temperature
 		sqr_2 = new Square();
 		sqr_3 = new Square();
@@ -40,10 +48,9 @@ public class CompositeDungeonTest {
 		sqrDun_lvl1.addAsSquareAt(sqr_3, new Point(0,0,0), Direction.DOWN);
 		// the 3 added square are connected.
 		
-		// NOTE: since we add the sub dungeons before adding any squares to them, adding squares to those subdungeons will
+		// NOTE: since we add the sub dungeons to their parent before adding any squares to them, adding squares to those subdungeons will
 		// already take neighbors in account that are located in the root, so the parameter destroyObstacels, of addSquareAt will work.
-		// If these action would be executed the other way around, that the added sub dungeons be have walls at their edges, so
-		// sqr_1 and sqr_3 woul not be connected.
+		// Else sqr_1 and sqr_3 would not be connected
 	}
 	
 	
@@ -64,10 +71,11 @@ public class CompositeDungeonTest {
 		assertTrue(cmpDun_lvl0.overlapsWithOtherSubDungeon(cmpDun_lvl1, new Point(3,3,2), new Point(0,0,0))); // (see next test)
 	}
 	
+	/**
+	 * @note Test for implementation in AbstractDungeon (tested method not overwritten in CompositeDungeon)
+	 */
 	@Test
 	public void testCanHaveAsMaximumDimensions(){
-		// NOTE this test supplements the test in DungeonTest
-		
 		assertFalse(cmpDun_lvl1.canHaveAsMaximumDimensions(new Point(3,3,2)));
 	}
 	
@@ -75,7 +83,7 @@ public class CompositeDungeonTest {
 	/*****************************************************************
 	 * SQUARE MANAGEMENT
 	 *****************************************************************/
-	
+
 	@Test
 	public void testGetSquares(){
 		// the root of the hierarchy contains all squares, so also sqr_1
@@ -111,21 +119,22 @@ public class CompositeDungeonTest {
 	}
 	
 	@Test
+	public void testGetEmptySpace(){
+		assertEquals(10, cmpDun_lvl0.getEmptrySpace());
+		assertEquals(2, sqrDun_lvl2.getEmptrySpace());
+	}
+	
+	/**
+	 * @note Test for implementation in AbstractDungeon (tested method not overwritten in CompositeDungeon)
+	 * @see Also SquareDungeonTest
+	 */
+	@Test
 	public void testCanHaveAsSquareAt(){
-		// NOTE: The implementation of this method is overwritten from Dungeon.
-		// For more extensive tests, look in SquareDungeonTest
-		
 		// A square can only be located in a conpositeDungeon where there is a sub-dungeon that can contain it.
 		Square s = new Square();
 		assertTrue(cmpDun_lvl0.canHaveAsSquareAt(s, new Point(0,0,0)));
 		assertTrue(cmpDun_lvl0.canHaveAsSquareAt(s, new Point(2,2,1)));
 		assertFalse(cmpDun_lvl0.canHaveAsSquareAt(s, new Point(2,2,0)));
-		
-		// The following line should throw an assertion error (is -ea in set in VM)
-		// A square can not be located at two different location in its root dungeon at the same time
-		// cmpDun_lvl0.canHaveAsSquareAt(sqr_3, new Point(0,0,0));
-		// The following line will run properly tough
-		assertTrue(cmpDun_lvl0.canHaveAsSquareAt(sqr_3, new Point(0,0,1)));
 	}
 	
 	@Test
@@ -142,31 +151,28 @@ public class CompositeDungeonTest {
 		
 		// test condition that should have been met after setUp()
 		// note that those squares where added using the add method of a SquareDugneon instead of CompositeDungeon (effect should be the same...)
-		
 		// Neighbor checks
 		assertSame(sqr_1, sqr_2.getNeighborAt(Direction.WEST));
 		assertSame(sqr_1, sqr_3.getNeighborAt(Direction.DOWN));
 		assertSame(s, sqr_3.getNeighborAt(Direction.NORTH));
 		assertSame(null, sqr_1.getNeighborAt(Direction.SOUTH)); // outside of the dungeon
-		
 		// Neighbor bidirectionality
 		assertSame(sqr_2, sqr_1.getNeighborAt(Direction.EAST));
 		assertSame(sqr_3, sqr_1.getNeighborAt(Direction.UP));
-		
 		// Obstacles checks
 		assertFalse(sqr_1.hasWall(Direction.EAST));			
 		assertFalse(sqr_1.hasWall(Direction.UP));
 		assertTrue(sqr_1.hasWall(Direction.SOUTH)); // at the edge of the dungeon
-		assertTrue(sqr_3.hasWall(Direction.NORTH)); // Towards the newly added square
-				
+		assertTrue(sqr_3.hasWall(Direction.NORTH)); // Towards the newly added square	
 		// Obstacles bidirectionality
 		assertSame(sqr_3.getObstacleAt(Direction.NORTH), s.getObstacleAt(Direction.SOUTH));
-		
 		// Temperature check (Note that the door between 2 and 3 is open)
 		assertEquals(sqr_1.getTemperature(), sqr_2.getTemperature(), 0.00001f);
 		assertEquals(sqr_1.getTemperature(), sqr_3.getTemperature(), 0.00001f);
 		assertNotEquals(sqr_3.getTemperature(), s.getTemperature(), 0.00001f);
-		
+		// Dungeon of square check
+		assertSame(sqrDun_lvl2, sqr_1.getDungeon());
+		assertSame(sqrDun_lvl1, sqr_3.getDungeon());
 	}
 	
 	@Test
@@ -177,24 +183,39 @@ public class CompositeDungeonTest {
 		// test remove a square where there actually is one
 		cmpDun_lvl0.removeAsSquareAt(new Point(0,0,0));
 		
-		
 		// the square does not belong to any dungeon anymore
 		assertFalse(cmpDun_lvl0.hasSquareAt(new Point(0,0,0)));
 		assertFalse(cmpDun_lvl1.hasSquareAt(new Point(0,0,0)));
-
 		// walls are build at the outer edges of the dungeon
 		assertTrue(sqr_2.hasWall(Direction.WEST));
 		assertTrue(sqr_3.hasWall(Direction.DOWN));
-		
 		// the square does not have any neighbors anymore, and is surrounded with walls
 		for(Direction d: Direction.values()){
 			assertTrue(sqr_1.hasWall(d));
 			assertNull(sqr_1.getNeighborAt(d));
 		}
-		
 		// neighboring squares don't have the square as its  neighbor anymore
 		assertNull(sqr_2.getNeighborAt(Direction.WEST));
 		assertNull(sqr_3.getNeighborAt(Direction.DOWN));
+		// the removed square has no dungeon anymore
+		assertNull(sqr_1.getDungeon());
+	}
+	
+	@Test
+	public void testSwapSquareAt(){
+		//NOTE more extensive tests concerning obstacles are done in SquareDungeonTest
+		cmpDun_lvl0.swapSquareAt(new Point(0,0,0), sqr_3);
+		// squares changed places (BETWEEN DIFFERENT SUBDUNGEONS!)
+		assertSame(sqr_3, cmpDun_lvl0.getSquareAt(new Point(0,0,0)));
+		assertSame(sqr_1, cmpDun_lvl0.getSquareAt(new Point(0,0,1)));
+		assertTrue(sqrDun_lvl1.getSquares().contains(sqr_1));
+		assertTrue(sqrDun_lvl2.getSquares().contains(sqr_3));
+		// obstacles are recomputed: opening + wall = wall
+		assertTrue(sqr_1.hasWall(Direction.DOWN));
+		assertTrue(sqr_3.hasWall(Direction.UP));
+		// the swapped squares now belong to different dungeons
+		assertSame(sqrDun_lvl2, sqr_3.getDungeon());
+		assertSame(sqrDun_lvl1, sqr_1.getDungeon());
 	}
 	
 	@Test 
@@ -203,45 +224,40 @@ public class CompositeDungeonTest {
 		cmpDun_lvl0.addAsSquareAt(new Square(), new Point(0,1,0));
 		cmpDun_lvl0.addAsSquareAt(new Square(), new Point(0,1,1));
 		cmpDun_lvl0.addAsSquareAt(new Square(), new Point(1,2,1));
-		Square lastInIteration = new Square(); // The left most, and back most square
-		cmpDun_lvl0.addAsSquareAt(lastInIteration, new Point(2,1,1));
+		cmpDun_lvl0.addAsSquareAt(new Square(), new Point(2,1,1));
 		
 		int i = 1;
 		SquareIterator it = cmpDun_lvl0.iterator();
-		Square s = it.next();
-		// the first square in iteration
+		Square s = it.next(); // the first square in iteration
 		assertSame(s, cmpDun_lvl0.getSquareAt(new Point(0,0,0)));
 		while(it.hasNext()){
 			i++;
 			Square next = it.next();
-			// for a visual check, uncomment the following:
-			// System.out.println(cmpDun_lvl0.getPositionOfSquare(next).toString());
+			// the position of the next square is bigger than the one of the previous
 			assertTrue(cmpDun_lvl0.getPositionOfSquare(next).compareTo(cmpDun_lvl0.getPositionOfSquare(s)) > 0 );
 			s = next;
 		}
-		// the last square in iteration;
-		assertSame(s, lastInIteration);
 		// the same number of squares was iterated as there are are in comDun_lvl0 
 		assertEquals(cmpDun_lvl0.getNbSquares(), i);
 	}
 	
 	@Test
-	public void collapse() throws IllegalMaximumDimensionsException, IllegalSubDungeonAtPositionException, IllegalSubDungeonException{
+	public void collapse() throws IllegalMaximumDimensionsException, IllegalDungeonAtPositionException, IllegalDungeonException{
 		// This method requires a more extensive setup than the current
 		CompositeDungeon main = new CompositeDungeon(new Point(1,1,3));
 		
 		// 3 square dungeons on top of each other, with at the top a rock, and below normal squares.
-		SquareDungeon topDun = new SquareDungeon(new Point(1,1,1));
+		SquareDungeon topDun = new Level(new Point(1,1,1));
 		Square topSqr = new Rock();
 		topDun.addAsSquareAt(topSqr, new Point(0,0,0));
 		main.addAsSubDungeonAt(topDun, new Point(0,0,2));
 		
-		SquareDungeon midDun = new SquareDungeon(new Point(1,1,1));
+		SquareDungeon midDun = new Level(new Point(1,1,1));
 		Square midSqr = new Square();
 		midDun.addAsSquareAt(midSqr, new Point(0,0,0));
 		main.addAsSubDungeonAt(midDun, new Point(0,0,1));
 		
-		SquareDungeon bottomDun = new SquareDungeon(new Point(1,1,1));
+		SquareDungeon bottomDun = new Level(new Point(1,1,1));
 		Square bottomSqr = new Square();
 		bottomDun.addAsSquareAt(bottomSqr, new Point(0,0,0));
 		main.addAsSubDungeonAt(bottomDun, new Point(0,0,0));
@@ -269,15 +285,16 @@ public class CompositeDungeonTest {
 	 * TERMINATION
 	 *****************************************************************/
 	
+	/**
+	 * @note postcondition of removaAsSubDungeon() are also valid, but are not tested here.
+	 */
 	@Test
 	public void testTerminate(){
 		cmpDun_lvl1.terminate();
 		assertEquals(0, cmpDun_lvl1.getNbSubDungeons());
 		assertFalse(cmpDun_lvl0.hasAsSubDungeon(cmpDun_lvl1));
 		assertTrue(cmpDun_lvl1.isTerminated());
-		// postcondition of removaAsSubDungeon() are also valid, but are not tested here.
 	}
-
 	
 	
 	
@@ -285,7 +302,6 @@ public class CompositeDungeonTest {
 	 * SUB DUNGEONS
 	 *****************************************************************/
 	
-	//NOTE: the following 5 tests are trivial, but give an indication if internal storage works as expected.
 	@Test
 	public void testGetSubDungeons(){
 		assertTrue(cmpDun_lvl0.getSubDungeons().contains(cmpDun_lvl1));
@@ -318,22 +334,21 @@ public class CompositeDungeonTest {
 		assertFalse(cmpDun_lvl0.hasAsSubDungeon(sqrDun_lvl2));
 	}
 	
-	//NOTE: non-trivial tests start here
 	@Test
 	public void testCanHaveAsSubDungeon() throws IllegalMaximumDimensionsException{
-		SquareDungeon trmSqrDun = new SquareDungeon(new Point(3,3,1));
-		trmSqrDun.terminate(); // trivial termination...
-		SquareDungeon validSqrDun = new SquareDungeon(new Point(3,3,1));
+		SquareDungeon trmSqrDun = new Level(new Point(3,3,1));
+		trmSqrDun.terminate();
+		SquareDungeon validSqrDun = new Level(new Point(3,3,1));
 
 		CompositeDungeon trmCmpDun = new CompositeDungeon(new Point(3,3,3));
-		trmCmpDun.terminate(); // trivial termination...
+		trmCmpDun.terminate();
 		CompositeDungeon validCmpDun = new CompositeDungeon(new Point(3,3,3));
 		
 		// test concerning termination and effectiveness
 		assertTrue(validCmpDun.canHaveAsSubDungeon(validSqrDun));
 		assertFalse(validCmpDun.canHaveAsSubDungeon(trmSqrDun));
 		assertFalse(validCmpDun.canHaveAsSubDungeon(null));
-		assertTrue(trmCmpDun.canHaveAsSubDungeon(null));
+		assertFalse(trmCmpDun.canHaveAsSubDungeon(null));
 		assertFalse(trmCmpDun.canHaveAsSubDungeon(validSqrDun));
 		assertFalse(trmCmpDun.canHaveAsSubDungeon(trmSqrDun));
 		
@@ -346,7 +361,7 @@ public class CompositeDungeonTest {
 	public void testCanHaveAsSubDungeonAt() throws IllegalMaximumDimensionsException{
 		// Also see previous test
 		
-		SquareDungeon validSqrDun = new SquareDungeon(new Point(3,3,1));
+		SquareDungeon validSqrDun = new Level(new Point(3,3,1));
 		// perfect fit
 		assertTrue(cmpDun_lvl0.canHaveAsSubDungeonAt(validSqrDun, new Point(0,0,2)));
 		// overlap with sqrDun_lvl1
@@ -357,7 +372,6 @@ public class CompositeDungeonTest {
 	
 	@Test
 	public void testHasProperSubDungeons() throws IllegalMaximumDimensionsException{
-		// A method that should ALWAYS return true...
 		assertTrue(cmpDun_lvl0.hasProperSubDungeons());
 		assertTrue(cmpDun_lvl1.hasProperSubDungeons());
 		
@@ -366,21 +380,21 @@ public class CompositeDungeonTest {
 	}
 	
 	
-	@Test (expected = IllegalSubDungeonException.class)
-	public void testAddAsSubDungeonAt_Illegal_SubDungeonWithParent() throws IllegalSubDungeonAtPositionException, IllegalSubDungeonException{
+	@Test (expected = IllegalDungeonException.class)
+	public void testAddAsSubDungeonAt_Illegal_SubDungeonWithParent() throws IllegalDungeonAtPositionException, IllegalDungeonException{
 		//add a sub dungeon that already has a dungeon as its sub dungeon
 		cmpDun_lvl0.addAsSubDungeonAt(sqrDun_lvl2, new Point(0,0,2));
 	}
 	
-	@Test (expected = IllegalSubDungeonAtPositionException.class)
-	public void testAddAsSubDungeonAt_Illegal_Position() throws IllegalSubDungeonAtPositionException, IllegalMaximumDimensionsException, IllegalSubDungeonException{
+	@Test (expected = IllegalDungeonAtPositionException.class)
+	public void testAddAsSubDungeonAt_Illegal_Position() throws IllegalDungeonAtPositionException, IllegalMaximumDimensionsException, IllegalDungeonException{
 		// add a sub dungeon that would overlap with another sub dungeon
-		SquareDungeon validSqrDun = new SquareDungeon(new Point(3,3,1));
+		SquareDungeon validSqrDun = new Level(new Point(3,3,1));
 		cmpDun_lvl0.addAsSubDungeonAt(validSqrDun, new Point(0,0,1));
 	}
 	
-	@Test (expected = IllegalSubDungeonAtPositionException.class)
-	public void testAddAsSubDungeonAt_Illegal_SubDungeonLoop() throws IllegalSubDungeonAtPositionException, IllegalMaximumDimensionsException, IllegalSubDungeonException{
+	@Test (expected = IllegalDungeonAtPositionException.class)
+	public void testAddAsSubDungeonAt_Illegal_SubDungeonLoop() throws IllegalDungeonAtPositionException, IllegalMaximumDimensionsException, IllegalDungeonException{
 		// add a sub dungeon that is your own parent (sizes of both should be the same, for them not to throw the
 		// exception for the wrong reason)
 		CompositeDungeon cmp1 = new CompositeDungeon(new Point(3,3,3));
@@ -391,8 +405,8 @@ public class CompositeDungeonTest {
 	}
 
 	@Test
-	public void testAddAsSubDungeonAt_Legal() throws IllegalMaximumDimensionsException, IllegalSubDungeonAtPositionException, IllegalSubDungeonException{
-		SquareDungeon sqrDun_new = new SquareDungeon(new Point(3,3,1));
+	public void testAddAsSubDungeonAt_Legal() throws IllegalMaximumDimensionsException, IllegalDungeonAtPositionException, IllegalDungeonException{
+		SquareDungeon sqrDun_new = new Level(new Point(3,3,1));
 		Square sqr_new = new Square();
 		sqrDun_new.addAsSquareAt(sqr_new, new Point(0,0,0));
 		
@@ -449,10 +463,10 @@ public class CompositeDungeonTest {
 	
 	
 	
-	
 	/*****************************************************************
 	 * PARENT DUNGEONS - some of these test are valid for ALL dungeons (not only for CompositeDungeon())
 	 *****************************************************************/
+	
 	@Test
 	public void testGetParentDungeon(){
 		assertSame(cmpDun_lvl0, cmpDun_lvl1.getParentDungeon());
@@ -460,9 +474,18 @@ public class CompositeDungeonTest {
 		assertSame(cmpDun_lvl1, sqrDun_lvl2.getParentDungeon());
 	}
 	
-	@Test
-	public void testSetParentDungeon(){
-		// enable assertion (-ea) to check if preconditions are fulfilled (-> all unit tests pass the assertions...)
+	@Test (expected = IllegalDungeonException.class)
+	public void testSetParentDungeon_Illegal_Null() throws IllegalDungeonException{
+		// the parent of a dungeon that currently has a parent can not be set to null if that dungeon is still contained in its parent
+		cmpDun_lvl1.setParentDungeon(null);
+	}
+	
+	@Test (expected = IllegalDungeonException.class)
+	public void testSetParentDungeon_Illegal_NotNull() throws IllegalMaximumDimensionsException, IllegalDungeonException{
+		// The parent of a dungeon that currently has no parent can not be set to an other dungeon if that other dungeon does not contain
+		// the dungeon.
+		CompositeDungeon tempCmpDun = new CompositeDungeon();
+		cmpDun_lvl0.setParentDungeon(tempCmpDun);
 	}
 	
 	@Test

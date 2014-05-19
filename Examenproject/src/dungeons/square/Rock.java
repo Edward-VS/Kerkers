@@ -1,7 +1,7 @@
 /**
  * The package for a roleplaying game.
  */
-package dungeons;
+package dungeons.square;
 
 import dungeons.util.Direction;
 import be.kuleuven.cs.som.annotate.Basic;

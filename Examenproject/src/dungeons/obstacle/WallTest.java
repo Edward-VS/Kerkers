@@ -7,7 +7,7 @@ import static org.junit.Assert.*;
 
 import org.junit.Test;
 
-import dungeons.Square;
+import dungeons.square.Square;
 import dungeons.util.Direction;
 
 /**
