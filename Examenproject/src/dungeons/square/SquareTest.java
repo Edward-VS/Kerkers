@@ -8,7 +8,9 @@ import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
 
-import dungeons.obstacle.*;
+import dungeons.obstacle.Door;
+import dungeons.obstacle.Obstacle;
+import dungeons.obstacle.Wall;
 import dungeons.util.*;
 
 
@@ -67,9 +69,9 @@ public class SquareTest {
 	@Test
 	public void testIsValidTemperature() {
 		/*
-		 * Invalid temperature -201 and +5001.
+		 * Invalid temperature -2001 and +5001.
 		 */
-		assertFalse(Square.isValidTemperature(-201));
+		assertFalse(Square.isValidTemperature(-2001));
 		assertFalse(Square.isValidTemperature(5001));
 		/*
 		 * Valid temperature +1000.
@@ -144,21 +146,6 @@ public class SquareTest {
 		Square.setHeatDamageAbove(10);
 		assertTrue(Square.getHeatDamageAbove() == 10);
 		Square.setHeatDamageAbove(35);
-	}
-
-	/**
-	 * Test method for getObstacleAt().
-	 */
-	@Test
-	public void testGetObstacleAt() {
-		//TODO zeker geen instanceof in in een test gebruiken...
-		//TODO Christof: Is test van deze getter wel nodig?
-		assertTrue(testSquare4.getObstacleAt(Direction.EAST) instanceof Door);
-		assertTrue(testSquare4.getObstacleAt(Direction.NORTH) instanceof Wall);
-		testSquare4.registerNeighbor(testSquare1, Direction.SOUTH);
-		testSquare4.destroyObstacleAt(Direction.SOUTH);
-		assertTrue(testSquare4.getObstacleAt(Direction.SOUTH) ==  null);
-		testSquare4.buildWallAt(Direction.SOUTH);
 	}
 
 	/**
@@ -270,6 +257,27 @@ public class SquareTest {
 		testSquare4.removeNeighbor(Direction.EAST);
 		assertEquals(testSquare4.getNeighborAt(Direction.EAST), null);
 		testSquare4.registerNeighbor(testSquare3, Direction.EAST);
+	}
+	
+	/**
+	 * Second test for canHaveAsObstacle().
+	 */
+	@Test 
+	public void testCanHaveAsObstacle2(){
+		Square rock = new Rock();
+		Square isolated = new Square();
+		Square square1 = new Square();
+		Square square2 = new Square();
+		square1.registerNeighbor(square2, Direction.NORTH);
+		Obstacle wall = new Wall();
+		Obstacle door = new Door();
+		assertTrue(rock.canHaveAsObstacleAt(Direction.NORTH, wall));
+		assertFalse(rock.canHaveAsObstacleAt(Direction.NORTH, door));
+		assertFalse(rock.canHaveAsObstacleAt(Direction.NORTH, null));
+		assertTrue(isolated.canHaveAsObstacleAt(Direction.NORTH, wall));
+		assertFalse(isolated.canHaveAsObstacleAt(Direction.NORTH, door));
+		assertTrue(square1.canHaveAsObstacleAt(Direction.NORTH, door));
+		assertTrue(square1.canHaveAsObstacleAt(Direction.NORTH, null));
 	}
 }	
 
