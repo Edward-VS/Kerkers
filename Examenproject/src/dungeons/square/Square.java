@@ -1138,7 +1138,7 @@ public class Square {
 	 * 
 	 * @param direction
 	 * 		The direction to fix the obstacles in
-	 * @effect If the neighbor in the given direction is null, then a door is build in that direction.
+	 * @effect If the neighbor in the given direction is null, then a wall is build in that direction.
 	 * 		| if getNeighborAt(direction) == null
 	 * 		|	then buildWallAt(direction)
 	 * @effect Else the following happens:

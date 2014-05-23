@@ -67,7 +67,7 @@ public interface Dungeon extends Iterable<Square> {
 	 * @return If the given maximum dimensions are null, than false
 	 * 		| if maximumDimensions == null
 	 * 		|	then result == false
-	 * @returnElse if the given maximum dimensions are bigger that the maximum allowed dimensions
+	 * @return Else if the given maximum dimensions are bigger that the maximum allowed dimensions
 	 *		then false
 	 *		| else if !maximumDimensions.isEqualOrSmallerThanValue(ABSOLUTE_MAXIMUM_DIMENSIONS)
 	 *		|	then result == false

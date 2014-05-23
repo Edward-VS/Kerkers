@@ -112,16 +112,35 @@ public class DungeonsMain {
 		Point maxDim = d.getMaximumDimensions();
 		for(int i = 0; i < maxDim.getZ(); i++){
 			for(int j = 0; j < maxDim.getX(); j++){
+				String resH = " ";
+				String resL = "";
 				for(int k = 0; k < maxDim.getY(); k++){
 					Point p = new Point(j, k, i);
 					if(d.hasSquareAt(p)){
-						if(d.getSquareAt(p) instanceof TeleportationSquare) System.out.print("T");
-						else System.out.print("O");
+						Square s = d.getSquareAt(p);
+						if(s.getObstacleAt(Direction.NORTH) != null){
+							resH += "- ";
+						}else{
+							resH += "  ";
+						}
+						if(s.getObstacleAt(Direction.WEST) != null){
+							resL += "| ";
+						}else{
+							resL += "  ";
+						}
+						//resL += ""
+						
+						//if(d.getSquareAt(p) instanceof TeleportationSquare) System.out.print("T");
+						//else System.out.print("O");
 					}else{
-						System.out.print(" ");
+						resH += "- ";
+						resL += "|x";
+						//System.out.print(" ");
 					}
+					
 				}
-				System.out.print("\n");
+				System.out.print(resH + "\n" + resL + "\n");
+				//System.out.print("\n");
 			}
 			System.out.print("_____________________________________________________\n");
 		}
