@@ -52,7 +52,7 @@ import dungeons.obstacle.*;
  * 		Also the temperature must be between valid boundaries.
  * 		| hasProperTemperature() == true
  * @invar A square always has a proper dungeon.
- * 		| hasProperParentDungeon()
+ * 		| hasProperParentDungeon() == true
  */
 public class Square {
 
@@ -111,9 +111,6 @@ public class Square {
 
 	/**
 	 * Terminator, to tear down bidirectional association between neighbors.
-	 * !NOTE! This terminator lacks in the fact that it is unable to check whether the square
-	 * is still present in any Dungeon. If it is still present, but in a terminated state, then
-	 * invariants of Dungeon are broken!
 	 * 
 	 * @post The square is set terminated.
 	 * 		|new.isTerminated() == true
@@ -126,12 +123,12 @@ public class Square {
 	 * @post The square doesn't have any neighbors left.
 	 * 		|new.getNeighbors().isEmpty() == true
 	 * @post The dungeon of this square is set to null.
+	 * 		|new.getDungeon() == null
 	 */
 	public void terminate() {
 		isTerminated = true;
 		
 		for (Direction d : Direction.values()) {
-			this.buildWallAt(d);
 			this.removeNeighbor(d);
 		}
 		
@@ -165,6 +162,7 @@ public class Square {
 	 * 		The dungeon to check
 	 * @return If the given dungeon is effective, then true if it can contain this square.
 	 * 		| result == (dungeon == null) || dungeon.canHaveAsSquare(this)
+	 * @note The method is annotated raw because it must be usable when the invariants aren't satisfied.
 	 */
 	@Raw
 	public boolean canHaveAsDungeon(SquareDungeon dungeon){
@@ -181,6 +179,8 @@ public class Square {
 	 * 		and only if the dungeon contains this square.
 	 * 		| else if getDungeon() != null
 	 * 		|	then result == getDungeon().hasAsSquare(this)
+	 * @note The method is annotated raw because it must be usable when the invariants aren't satisfied. 
+	 * 		Otherwise this method would only return true and not be very useful.
 	 */
 	@Raw
 	public boolean hasProperParentDungeon(){
@@ -198,6 +198,7 @@ public class Square {
 	 * 		| dungeon != null && !dungeon.hasAsSquare(this)
 	 * 		Or the given dungeon is not effective, but the current dungeon of this square still contains it.
 	 * 		| dungeon == null && getDungeon() != null && getDungeon().hasAsSquare(this)
+	 * @note Annotated raw because this method is used by other method from Dungeon, while the invariant isn't satisfied yet.
 	 */
 	@Raw
 	public void setDungeon(SquareDungeon dungeon) throws IllegalDungeonException{
@@ -335,7 +336,10 @@ public class Square {
 	 * 		|for each square in computeGroup(): 
 	 * 		|	return == (for each square in computeGroup():
 	 * 		|		 sum = sum + old.square.getTemperature)/calculateGroup().size()
+	 * @note This method is annotated raw because it is possible that it is used to calculate temperature that violates the invariants (especially in groups of squares).
+	 * 		Especially when used by updateTemperature.
 	 */
+	@Raw
 	public int calculateUpdateTemperature() {
 		int sum = 0;
 		int average;
@@ -621,25 +625,31 @@ public class Square {
 	 * @param dir The direction.
 	 * @return Returns true if the obstacle is the same for this and his neighbor in a given direction.
 	 * 		This is also important for the moveability.
-	 * 		|if(this.hasWall(dir)) 
-	 * 		|	then return == this.getNeighborAt(dir).hasWall(dir.oppositeDirection()) 
-	 * 		|if(this.hasDoor(dir)) 
-	 * 		|	then return == this.getNeighborAt(dir).hasDoor(dir.oppositeDirection())
-	 * 		|				&& (this.isOpen(dir) == this.getNeighborAt(dir).isOpen(dir.oppositeDirection())
-	 * 		|if(!this.hasDoor(dir) && !this.hasWall(dir)) 
-	 * 		|	then return == !this.getNeighborAt(dir).hasDoor(dir.oppositeDirection()) 
-	 * 		|				&& !this.getNeighborAt(dir)hasWall(dir.oppositeDirection())
+	 * 		Of course if there is a neighbor. Else (if it hasn't a neighbor) return true.
+	 * 		|if(this.hasNeighborAt(dir))
+	 * 		|	then
+	 * 		|	if(this.hasWall(dir)) 
+	 * 		|		then return == this.getNeighborAt(dir).hasWall(dir.oppositeDirection()) 
+	 * 		|	if(this.hasDoor(dir)) 
+	 * 		|		then return == this.getNeighborAt(dir).hasDoor(dir.oppositeDirection())
+	 * 		|					&& (this.isOpen(dir) == this.getNeighborAt(dir).isOpen(dir.oppositeDirection())
+	 * 		|	if(!this.hasDoor(dir) && !this.hasWall(dir)) 
+	 * 		|		then return == !this.getNeighborAt(dir).hasDoor(dir.oppositeDirection()) 
+	 * 		|					&& !this.getNeighborAt(dir)hasWall(dir.oppositeDirection())
+	 * 		|else return true
 	 */
 	public boolean hasSameAdjecantObstacleAt(Direction dir) {
-		if (this.hasWall(dir)) {
-			return this.getNeighborAt(dir).hasWall(dir.oppositeDirection());
+		if(this.hasNeighborAt(dir)){
+			if (this.hasWall(dir)) {
+				return this.getNeighborAt(dir).hasWall(dir.oppositeDirection());
+			}
+			if (this.hasDoor(dir)) {
+				return ((this.getNeighborAt(dir).hasDoor(dir.oppositeDirection())) && (this.isOpen(dir) == this.getNeighborAt(dir).isOpen(dir.oppositeDirection())));
+			} else {
+				return !this.getNeighborAt(dir).hasDoor(dir.oppositeDirection()) && !this.getNeighborAt(dir).hasWall(dir.oppositeDirection());
+			}
 		}
-		if (this.hasDoor(dir)) {
-			return ((this.getNeighborAt(dir).hasDoor(dir.oppositeDirection())) && (this.isOpen(dir) == this.getNeighborAt(dir).isOpen(dir.oppositeDirection())));
-		} else {
-			return !this.getNeighborAt(dir).hasDoor(dir.oppositeDirection()) && !this.getNeighborAt(dir).hasWall(dir.oppositeDirection());
-		}
-
+		return true;
 	}
 	
 	/**
@@ -684,6 +694,8 @@ public class Square {
 	 * @param obstacle The obstacle you want to check.
 	 * @return The method will return the return of canBeAnObstacleAt of the specific obstacle.
 	 * 		|return == obstacle.canBeAnObstacleAt(this, dir)
+	 * @return For null obstacles the method will return true if there is a neighbor and the square isnt a rock.
+	 * 		|return == (this.getNeighborAt(dir) != null && this.notAlwaysSurroundedByWalls())
 	 */
 	public boolean canHaveAsObstacleAt(Direction dir, Obstacle obstacle) {
 		if(obstacle == null){
