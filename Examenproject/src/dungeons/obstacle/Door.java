@@ -79,12 +79,6 @@ public class Door extends Obstacle {
 	 * 		|	return == true
 	 */
 	public boolean canBeAnObstacleAt(Square square, Direction dir) {
-		/*if((square == null) ||(square.isTerminated()) || (square.notAlwaysSurroundedByWalls()) || (square.getNeighborAt(dir) == null)){
-			return false;
-		}
-		else{
-			return true;
-		}*/
 		if((square == null) ||(square.isTerminated()) || (square.getNeighborAt(dir) == null)){
 			return false;
 		}

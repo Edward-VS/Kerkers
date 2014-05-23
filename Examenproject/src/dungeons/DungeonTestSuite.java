@@ -10,6 +10,7 @@ import dungeons.dungeon.MagicCompositeDungeonTest;
 import dungeons.dungeon.MagicDungeonHelperTest;
 import dungeons.dungeon.ShaftTest;
 import dungeons.dungeon.SquareDungeonTest;
+import dungeons.obstacle.DoorTest;
 import dungeons.obstacle.ObstacleTest;
 import dungeons.obstacle.WallTest;
 import dungeons.square.SquareTest;
@@ -34,6 +35,8 @@ import dungeons.util.PointTest;
 	// Squares and obstacles
 	SquareTest.class,
 	WallTest.class,
+	ObstacleTest.class,
+	DoorTest.class,
 	ObstacleTest.class
 })
 

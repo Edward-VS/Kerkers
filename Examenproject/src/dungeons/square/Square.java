@@ -52,7 +52,7 @@ import dungeons.obstacle.*;
  * 		Also the temperature must be between valid boundaries.
  * 		| hasProperTemperature() == true
  * @invar A square always has a proper dungeon.
- * 		| hasProperDungeon()
+ * 		| hasProperParentDungeon()
  */
 public class Square {
 
@@ -481,7 +481,7 @@ public class Square {
 	/**
 	 * Variable to store the minimum temperature.
 	 */
-	private static int min_temperature = -200;
+	private static int min_temperature = -2000;
 
 	/**
 	 * Variable to store unit of heat damage for each step.
