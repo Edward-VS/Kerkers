@@ -8,6 +8,8 @@ import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
 
+import dungeons.dungeon.Shaft;
+import dungeons.exception.IllegalMaximumDimensionsException;
 import dungeons.obstacle.Door;
 import dungeons.obstacle.Obstacle;
 import dungeons.obstacle.Wall;
@@ -278,6 +280,20 @@ public class SquareTest {
 		assertFalse(isolated.canHaveAsObstacleAt(Direction.NORTH, door));
 		assertTrue(square1.canHaveAsObstacleAt(Direction.NORTH, door));
 		assertTrue(square1.canHaveAsObstacleAt(Direction.NORTH, null));
+	}
+	
+	/**
+	 * Second test for termination().
+	 * @throws IllegalMaximumDimensionsException This will not be thrown. The method doesn't test these exceptions.
+	 */
+	@Test
+	public void testTerminate2() throws IllegalMaximumDimensionsException{
+		Square square1 = new Square();
+		Shaft dungeon = new Shaft();
+		Point point = new Point(1,2,3);
+		dungeon.addAsSquareAt(square1, point, Direction.NORTH);
+		square1.terminate();
+		assertTrue(square1.getDungeon() == null);
 	}
 }	
 
